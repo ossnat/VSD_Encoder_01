@@ -1,0 +1,12 @@
+# Default paths and subject. Override via CLI or window config.
+
+monkey: gandalf
+
+split_csv: Data/FoundationData/ProcessedData/splits/split_v3_seed17_session_condition_group.csv
+trials_index_csv: Data/FoundationData/ProcessedData/splits/all_trials_index.csv
+
+spatial_size: [100, 100]
+
+paths:
+  averaged_root: Data/VSD_Encoder_01/averaged
+  plots_root: plots/averaged

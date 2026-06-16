@@ -1,0 +1,7 @@
+# Baseline window aligned with foundation-model stats (frames 5–24 inclusive).
+
+window_id: win_0005_0025
+start_frame: 5
+end_frame: 25
+avg_method: mean
+normalization: none

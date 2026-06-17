@@ -36,10 +36,11 @@ plots/ridge_encode/
 ## QC plots
 
 1. **bias.png** — `intercept_` reshaped to 100×100
-2. **reconstruction_*.png** — side-by-side per trial:
+2. **by_condition/{date}__{condition}.png** — side-by-side per condition (one trial each):
    - **Original (H5 mean)** — mean of raw trial frames `[start_frame, end_frame)` from session H5
-   - **Reconstructed (RidgeCV)** — model prediction
-3. **reconstructions_grid.png** — 3–4 sample trials (default: test split)
+   - **Reconstructed (RidgeCV)** — model prediction (same for all trials in a condition)
+3. **reconstructions_by_condition.png** — paginated orig|recon grid (all conditions)
+4. **reconstructions_by_condition_recon_only.png** — grid of reconstructions only for shape comparison
 
 ## Run
 

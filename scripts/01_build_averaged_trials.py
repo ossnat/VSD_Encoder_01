@@ -11,7 +11,7 @@ import pandas as pd
 import yaml
 
 from src.data.averaging import average_frames
-from src.data.h5_io import read_trial
+from src.data.h5_io import read_trial_by_global_id
 from src.data.plotting import plot_averaged_samples, select_sample_rows
 from src.data.splits import load_trial_table
 from src.data.xarray_schema import (
@@ -130,7 +130,7 @@ def build_averaged_trials(
             continue
 
         h5_path = resolve_data_path(row.target_file, repo)
-        trial = read_trial(h5_path, row.trial_dataset)
+        trial = read_trial_by_global_id(h5_path, trial_global_id)
         image = average_frames(
             trial,
             start_frame,

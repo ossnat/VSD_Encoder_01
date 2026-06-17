@@ -37,14 +37,14 @@ Configured in `configs/stimuli/default.yaml`:
 | Canvas | 224×224 RGB — **lower-right quadrant only** (fixation at top-left) |
 | Background | gray (128) |
 | Fixation | **not drawn** |
-| Quadrant extent | 4° right × 4° down from fixation |
-| Scale | 1° diameter = `canvas_size / 4` px (56 px); 0.5° = half that |
+| Quadrant extent | 6° right × 6° down from fixation (224 px = 6°) |
+| Scale | 1° diameter = `canvas_size / 6` px (~37.3 px); 0.5° = half that |
 | Contour width | 1 px |
 | Bar length | 0.3° (same as circle diameter; centered at `Stimulus Position`) |
 | Bar width | 1 px |
 | Size convention | values in CSV treated as **diameter** |
 
-A 1° circle spans one quarter of the canvas width; a 0.5° circle is half that diameter, matching `Data/EncoderData/8267.full.pdf` / methods figures.
+A 1° circle spans one sixth of the canvas width; a 0.5° circle is half that diameter, matching methods figures.
 
 Supported shapes parsed from the `stimulus (need to check r/d)` column:
 

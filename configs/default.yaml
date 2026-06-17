@@ -18,3 +18,4 @@ paths:
   plots_root: plots/averaged
   stimuli_plots_root: plots/stimuli
   ridge_plots_root: plots/ridge_encode
+  vsd_vs_stimulus_plots_root: plots/vsd_vs_stimulus

@@ -63,22 +63,22 @@ def test_point_size_ratio():
 
 
 def test_quadrant_degree_scale():
-    """1 deg diameter is twice 0.5 deg; positions measured from top-left fixation."""
-    cfg = RenderConfig(canvas_size=224, pixels_per_deg=56.0, quadrant_extent_deg=4.0)
+    """224 px canvas = 6 deg; 1 deg diameter is twice 0.5 deg."""
+    ppd = 224.0 / 6.0
+    cfg = RenderConfig(canvas_size=224, pixels_per_deg=ppd, quadrant_extent_deg=6.0)
     d1 = _size_to_radius_px(1.0, cfg) * 2
     d05 = _size_to_radius_px(0.5, cfg) * 2
-    assert d1 == pytest.approx(56.0, rel=0.01)
-    assert d05 == pytest.approx(28.0, rel=0.01)
+    assert d1 == pytest.approx(ppd, rel=0.01)
+    assert d05 == pytest.approx(ppd / 2.0, rel=0.01)
     assert d1 / d05 == pytest.approx(2.0, rel=0.01)
 
 
 def test_quadrant_position_from_fixation():
-    cfg = RenderConfig()
+    ppd = 224.0 / 6.0
+    cfg = RenderConfig(canvas_size=224, pixels_per_deg=ppd, quadrant_extent_deg=6.0)
     x_px, y_px = _deg_point_to_px(0.6, -0.75, cfg)
-    assert x_px == pytest.approx(0.6 * 56.0, rel=0.01)
-    assert y_px == pytest.approx(0.75 * 56.0, rel=0.01)
-    assert x_px < cfg.canvas_size / 2
-    assert y_px < cfg.canvas_size / 2
+    assert x_px == pytest.approx(0.6 * ppd, rel=0.01)
+    assert y_px == pytest.approx(0.75 * ppd, rel=0.01)
 
 
 def test_render_stimulus_shape():

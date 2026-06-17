@@ -45,7 +45,7 @@ def _portable_path(abs_path: Path, repo: Path) -> str:
 
 def _render_config(cfg: dict) -> RenderConfig:
     canvas_size = int(cfg.get("canvas_size", 224))
-    quadrant_extent_deg = float(cfg.get("quadrant_extent_deg", 4.0))
+    quadrant_extent_deg = float(cfg.get("quadrant_extent_deg", 6.0))
     pixels_per_deg = cfg.get("pixels_per_deg")
     if pixels_per_deg is None:
         pixels_per_deg = canvas_size / quadrant_extent_deg

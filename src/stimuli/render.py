@@ -14,10 +14,9 @@ from src.stimuli.catalog import StimulusSpec
 @dataclass(frozen=True)
 class RenderConfig:
     canvas_size: int = 224
-    # Lower-right quadrant: fixation at top-left; +x right, +y down (catalog y is negative).
-    # 1 deg diameter = pixels_per_deg px (e.g. 56 px on 224 canvas → 4 deg quadrant extent).
-    pixels_per_deg: float = 56.0
-    quadrant_extent_deg: float = 4.0
+    # 224×224 input = 6° × 6° lower-right quadrant (fixation at top-left).
+    pixels_per_deg: float = 224.0 / 6.0
+    quadrant_extent_deg: float = 6.0
     background_gray: int = 128
     bar_length_deg: float = 0.3
     bar_width_px: int = 1

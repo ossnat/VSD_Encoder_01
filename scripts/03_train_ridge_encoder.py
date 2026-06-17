@@ -12,10 +12,14 @@ import joblib
 import numpy as np
 import pandas as pd
 import yaml
+from PIL import Image
 
 from src.DL_features.schema import model_slug
-from src.data.averaging import average_frames
-from src.data.h5_io import read_trial
+from src.data.trial_frames import load_h5_mean_frame
+from src.encoding.vsd_stimulus_plotting import (
+    plot_vsd_vs_stimulus_grid,
+    plot_vsd_vs_stimulus_pair,
+)
 from src.encoding.ridge import (
     attach_feature_paths,
     bias_map,
@@ -26,9 +30,11 @@ from src.encoding.ridge import (
 )
 from src.encoding.ridge_plotting import (
     plot_bias_map,
+    plot_reconstructed_only_grid,
     plot_reconstruction_grid,
+    plot_reconstruction_grid_pages,
     plot_reconstruction_pair,
-    select_plot_samples,
+    select_one_trial_per_condition,
 )
 from src.encoding.schema import encoding_pairs_manifest_path, ridge_output_dir
 from src.paths import project_root, resolve_data_path, workspace_root
@@ -64,14 +70,14 @@ def _load_h5_mean_frame(
     end_frame: int,
     avg_method: str,
 ) -> np.ndarray:
-    h5_path = resolve_data_path(row.target_file, repo)
-    trial = read_trial(h5_path, row.trial_dataset)
-    return average_frames(
-        trial,
-        start_frame,
-        end_frame,
+    return load_h5_mean_frame(
+        target_file=str(row.target_file),
+        trial_global_id=int(row.trial_global_id),
+        repo=repo,
         spatial_size=spatial_size,
-        method=avg_method,
+        start_frame=start_frame,
+        end_frame=end_frame,
+        avg_method=avg_method,
     )
 
 
@@ -184,17 +190,21 @@ def train_ridge_encoder(
         title=f"RidgeCV intercept | {model_name} {feature_layer}",
     )
 
-    n_plot = int(ridge_cfg.get("n_plot_samples", 4))
-    prefer_split = str(ridge_cfg.get("plot_prefer_split", "test"))
-    plot_rows = select_plot_samples(
-        eval_df.to_dict("records") if not eval_df.empty else pairs.to_dict("records"),
-        n_samples=n_plot,
-        prefer_split=prefer_split,
-    )
+    plot_by_condition_dir = plot_dir / "by_condition"
+    plot_by_condition_dir.mkdir(parents=True, exist_ok=True)
+
+    prefer_split = ridge_cfg.get("plot_prefer_split", "test")
+    if ridge_cfg.get("plot_one_per_condition", True):
+        plot_df = select_one_trial_per_condition(
+            pairs, prefer_split=str(prefer_split) if prefer_split else None
+        )
+    else:
+        plot_df = pairs.head(int(ridge_cfg.get("n_plot_samples", 4)))
 
     grid_samples: list[tuple[dict, np.ndarray, np.ndarray]] = []
-    for meta in plot_rows:
-        row = pairs.loc[pairs["trial_global_id"] == meta["trial_global_id"]].iloc[0]
+    recon_only_samples: list[tuple[dict, np.ndarray]] = []
+
+    for _, row in plot_df.iterrows():
         x_row, _ = build_xy(pd.DataFrame([row]), repo=repo, spatial_size=spatial_size)
         recon = predict_maps(result, x_row, spatial_size)[0]
         original = _load_h5_mean_frame(
@@ -206,18 +216,58 @@ def train_ridge_encoder(
             avg_method=avg_method,
         )
         meta_dict = row.to_dict()
+        cond_key = f"{row['date']}__{row['condition']}"
         plot_reconstruction_pair(
             meta_dict,
             original,
             recon,
-            plot_dir / f"reconstruction_{int(row.trial_global_id):06d}.png",
+            plot_by_condition_dir / f"{cond_key}.png",
         )
         grid_samples.append((meta_dict, original, recon))
+        recon_only_samples.append((meta_dict, recon))
 
-    plot_reconstruction_grid(
+    plot_reconstruction_grid_pages(
         grid_samples,
-        plot_dir / "reconstructions_grid.png",
+        plot_dir,
         title=f"RidgeCV reconstructions | {window_id}",
+        rows_per_page=int(ridge_cfg.get("rows_per_grid_page", 12)),
+    )
+    plot_reconstructed_only_grid(
+        recon_only_samples,
+        plot_dir / "reconstructions_by_condition_recon_only.png",
+        title=f"RidgeCV reconstructions by condition | {window_id}",
+        ncol=int(ridge_cfg.get("recon_grid_ncol", 4)),
+    )
+
+    vsd_stim_dir = (
+        repo
+        / cfg["paths"].get("vsd_vs_stimulus_plots_root", "plots/vsd_vs_stimulus")
+        / monkey
+        / window_id
+        / "by_condition"
+    )
+    vsd_stim_samples: list[tuple[dict, np.ndarray, np.ndarray]] = []
+    for meta_dict, original, _recon in grid_samples:
+        row = plot_df.loc[
+            (plot_df["date"] == meta_dict["date"])
+            & (plot_df["condition"] == meta_dict["condition"])
+        ].iloc[0]
+        stim = np.asarray(
+            Image.open(resolve_data_path(row["image_path"], repo)).convert("RGB")
+        )
+        cond_key = f"{row['date']}__{row['condition']}"
+        plot_vsd_vs_stimulus_pair(
+            meta_dict, original, stim, vsd_stim_dir / f"{cond_key}.png"
+        )
+        vsd_stim_samples.append((meta_dict, original, stim))
+    plot_vsd_vs_stimulus_grid(
+        vsd_stim_samples,
+        repo
+        / cfg["paths"].get("vsd_vs_stimulus_plots_root", "plots/vsd_vs_stimulus")
+        / monkey
+        / window_id
+        / "all_conditions_grid.png",
+        title=f"VSD vs stimulus | {window_id}",
     )
 
     run_cfg = {
@@ -247,7 +297,7 @@ def train_ridge_encoder(
     for split_name, rs in split_scores.items():
         print(f"  r ({split_name}): mean={np.nanmean(rs):.3f} median={np.nanmedian(rs):.3f}")
     print(f"Model: {_portable_path(out_dir / 'model.joblib', repo)}")
-    print(f"Plots: {plot_dir.relative_to(repo)}")
+    print(f"Plots: {plot_dir.relative_to(repo)} ({len(grid_samples)} conditions)")
     return run_cfg
 
 

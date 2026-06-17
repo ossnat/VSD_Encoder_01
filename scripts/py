@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Run repo scripts with the project venv (macOS often has no `python` on PATH).
+#
+# Usage from repo root:
+#   scripts/py scripts/03_train_ridge_encoder.py --config configs/default.yaml ...
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
+
+export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
+
+PYTHON="${REPO_ROOT}/.venv/bin/python"
+if [[ ! -x "${PYTHON}" ]]; then
+  echo "ERROR: ${PYTHON} not found. Run: bash scripts/cluster_setup.sh" >&2
+  exit 1
+fi
+
+exec "${PYTHON}" "$@"

@@ -9,4 +9,12 @@ spatial_size: [100, 100]
 
 paths:
   averaged_root: Data/VSD_Encoder_01/averaged
+  dl_features_root: Data/VSD_Encoder_01/DL_features
+  dl_features_stimuli_root: Data/VSD_Encoder_01/DL_features_stimuli
+  encoder_data_root: Data/EncoderData
+  stimuli_root: Data/VSD_Encoder_01/stimuli
+  encoding_pairs_root: Data/VSD_Encoder_01/encoding_pairs
+  ridge_encode_root: Data/VSD_Encoder_01/ridge_encode
   plots_root: plots/averaged
+  stimuli_plots_root: plots/stimuli
+  ridge_plots_root: plots/ridge_encode

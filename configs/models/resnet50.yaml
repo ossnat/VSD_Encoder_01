@@ -1,0 +1,11 @@
+name: resnet50
+pretrained: true
+
+feature_layer: layer3
+
+input_size: 224
+input_channels: 3
+input_scaling: none
+imagenet_normalize: true
+
+batch_size: 8

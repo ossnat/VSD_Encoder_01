@@ -260,12 +260,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=4,
         help="Number of averaged-frame QC plots to save",
     )
+    parser.add_argument(
+        "--monkey",
+        type=str,
+        default=None,
+        help="Override monkey from config (e.g. gandalf)",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     cfg = _merge_config(args.config, args.window)
+    if args.monkey is not None:
+        cfg["monkey"] = args.monkey
     build_averaged_trials(
         cfg,
         max_trials=args.max_trials,

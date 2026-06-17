@@ -1,0 +1,15 @@
+# Stimulus rendering defaults (see docs/stimulus_rendering.md).
+#
+# Canvas = lower-right visual-field quadrant only (fixation at top-left corner).
+# Scale: 1 deg diameter = canvas_size / quadrant_extent_deg pixels.
+# Example: 1 deg circle → 56 px; 0.5 deg → 28 px; 0.3 deg → 16.8 px on 224 canvas.
+
+canvas_size: 224
+quadrant_extent_deg: 4.0
+pixels_per_deg: 56
+background_gray: 128
+bar_length_deg: 0.3
+bar_width_px: 1
+contour_width_px: 1
+assume_size_is_diameter: true
+draw_fixation: false

@@ -1,0 +1,9 @@
+# RidgeCV encoder defaults (stage 03).
+
+# L2 regularization strengths scanned by RidgeCV on train split.
+alphas: [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]
+
+cv_folds: 5
+standardize_features: true
+n_plot_samples: 4
+plot_prefer_split: test

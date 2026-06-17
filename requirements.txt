@@ -1,0 +1,17 @@
+# Runtime dependencies for VSD_Encoder_01.
+# Cluster/local one-liner:
+#   pip install -r requirements.txt && pip install -e .
+
+h5py>=3.8
+matplotlib>=3.7
+netCDF4>=1.6
+numpy>=1.24
+pandas>=2.0
+pyarrow>=14.0
+PyYAML>=6.0
+xarray>=2024.1
+Pillow>=10.0
+torch>=2.0
+torchvision>=0.15
+scikit-learn>=1.3
+joblib>=1.3

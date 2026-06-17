@@ -1,0 +1,13 @@
+name: resnet18
+pretrained: true
+
+# Spatial activation map after this ResNet stage (see docs/DL_feature_extraction.md).
+feature_layer: layer3
+
+# Input preprocessing for averaged VSD maps.
+input_size: 224
+input_channels: 3
+input_scaling: none          # none | per_image_zscore | minmax_01
+imagenet_normalize: true
+
+batch_size: 32

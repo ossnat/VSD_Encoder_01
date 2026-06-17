@@ -1,0 +1,46 @@
+# Shared workspace data (sibling Data/ directory)
+Data/
+../Data/
+
+# Project-generated artifacts (under shared Data/)
+# Tracked only via configs; never commit processed arrays.
+
+# Local run outputs
+plots/
+runs/
+checkpoints/
+checkpoints*/
+logs/
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Jupyter / IDE
+.ipynb_checkpoints/
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Test / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/

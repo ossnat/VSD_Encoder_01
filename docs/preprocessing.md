@@ -2,6 +2,8 @@
 
 Pipeline stage **01** reads session HDF5 trials (see `DATA_LAYOUT.md`), averages a frame window per trial, and writes self-describing NetCDF files plus a manifest.
 
+These averaged maps are the **targets (Y)** in the stimulus→VSD encoding pipeline. See `docs/encoding_pipeline.md`.
+
 ## Window convention
 
 - Slice is **half-open**: `[start_frame, end_frame)` in Python indexing.
@@ -84,10 +86,29 @@ Trials whose `target_file` H5 is not present under the workspace `Data/` tree ar
 
 ## Cluster (SLURM)
 
-See `slurm/build_averaged_trials.slurm`. Assumes sibling layout:
+One-time setup on the login node:
+
+```bash
+bash scripts/cluster_setup.sh
+```
+
+Submit:
+
+```bash
+sbatch slurm/build_averaged_trials.slurm
+```
+
+Assumes sibling layout:
 
 ```
 <workspace>/
 ├── Data/
 └── VSD_Encoder_01/
 ```
+
+Dependencies are listed in `requirements.txt` at the repo root.
+
+## Related
+
+- `docs/encoding_pipeline.md` — full stimulus→VSD encoding flow
+- `docs/stimulus_rendering.md` — stage 01b stimulus images

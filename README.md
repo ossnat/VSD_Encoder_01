@@ -8,7 +8,8 @@ Stimulus-to-VSD encoding pipeline:
 4. **RidgeCV encoding** → predict VSD from stimulus features
 5. **Evaluate** reconstructions on val/test splits
 
-See `docs/encoding_pipeline.md` for the full flow.
+See `docs/encoding_pipeline.md` for the full flow.  
+**Cluster:** see `docs/cluster_pipeline.md` for step-by-step setup and SLURM jobs.
 
 ## Setup
 
@@ -108,7 +109,18 @@ scripts/py scripts/02_extract_features.py \
 
 Docs: `docs/DL_feature_extraction.md`
 
-## SLURM
+## Cluster (full pipeline)
+
+```bash
+bash scripts/cluster_setup.sh
+bash scripts/verify_workspace.sh
+bash scripts/run_prepare_encoding.sh      # login node: 01b, 01, 01c
+bash scripts/submit_encoding_jobs.sh      # SLURM: 02b → 03
+```
+
+Details: `docs/cluster_pipeline.md`
+
+## SLURM (individual jobs)
 
 ```bash
 sbatch slurm/build_averaged_trials.slurm
@@ -116,7 +128,8 @@ sbatch slurm/build_stimulus_images.slurm
 sbatch slurm/build_encoding_pairs.slurm
 sbatch slurm/extract_stimulus_features.slurm
 sbatch slurm/train_ridge_encoder.slurm
-sbatch slurm/extract_features.slurm
+sbatch slurm/run_encoding_heavy.slurm      # 02b + 03 in one job
+sbatch slurm/extract_features.slurm          # legacy VSD-input path
 ```
 
 ## Data references

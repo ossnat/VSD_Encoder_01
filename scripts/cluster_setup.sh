@@ -29,7 +29,6 @@ fi
 
 echo ""
 echo "Setup complete."
-echo "  Local run: scripts/py scripts/03_train_ridge_encoder.py --help"
-echo "  Activate:  source .venv/bin/activate   # then: PYTHONPATH=. python3 ..."
-echo "  Or submit: sbatch slurm/build_averaged_trials.slurm"
-echo "             sbatch slurm/build_stimulus_images.slurm"
+echo "  Prepare:   bash scripts/run_prepare_encoding.sh"
+echo "  SLURM:     bash scripts/submit_encoding_jobs.sh"
+echo "  Docs:      docs/cluster_pipeline.md"

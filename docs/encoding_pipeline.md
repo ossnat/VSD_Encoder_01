@@ -59,6 +59,7 @@ Data/
 - `docs/stimulus_rendering.md` — stage 01b
 - `docs/encoding_pairs.md` — stage 01c
 - `docs/ridge_encoding.md` — stage 03
+- `docs/cluster_pipeline.md` — cluster setup and SLURM
 - `docs/preprocessing.md` — stage 01 (VSD averaging)
 - `docs/DL_feature_extraction.md` — CNN feature extraction (being updated for stimulus inputs)
 - `docs/DATA_LAYOUT.md` — shared VSD trial data layout

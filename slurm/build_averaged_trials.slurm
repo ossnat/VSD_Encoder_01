@@ -33,7 +33,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
 CONFIG="${CONFIG:-configs/default.yaml}"
-WINDOW_CONFIG="${WINDOW_CONFIG:-configs/windows/evoked_30_50.yaml}"
+WINDOW_CONFIG="${WINDOW_CONFIG:-configs/windows/evoked_32_42.yaml}"
 MONKEY="${MONKEY:-}"
 MAX_TRIALS="${MAX_TRIALS:-}"
 OVERWRITE="${OVERWRITE:-}"

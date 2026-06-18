@@ -53,6 +53,35 @@ def test_parse_session_block():
     assert specs[1].size_deg == 0.3
 
 
+def test_parse_bar_length_from_csv():
+    df = pd.DataFrame(
+        [
+            {
+                "Monkey": "Gandalf",
+                "Date": "10/7/2018",
+                "Session": "a",
+                "cortex file": "gan_2018_07_10a.1",
+                "stimulus (need to check r/d)": "cond5: black bar vertical, 1deg",
+                "Stimulus Position": "(0.6,-0.75)",
+            },
+            {
+                "Monkey": np.nan,
+                "Date": np.nan,
+                "Session": np.nan,
+                "cortex file": np.nan,
+                "stimulus (need to check r/d)": "cond7: black bar horizontal 1deg",
+                "Stimulus Position": np.nan,
+            },
+        ]
+    )
+    specs = parse_stimulus_rows(df, monkey="gandalf", bar_length_deg=0.3)
+    assert len(specs) == 2
+    assert specs[0].shape_type == "bar_vertical"
+    assert specs[0].size_deg == 1.0
+    assert specs[1].shape_type == "bar_horizontal"
+    assert specs[1].size_deg == 1.0
+
+
 def test_point_size_ratio():
     """0.1 deg and 0.05 deg points should produce different radii."""
     cfg = RenderConfig()
@@ -79,6 +108,27 @@ def test_quadrant_position_from_fixation():
     x_px, y_px = _deg_point_to_px(0.6, -0.75, cfg)
     assert x_px == pytest.approx(0.6 * ppd, rel=0.01)
     assert y_px == pytest.approx(0.75 * ppd, rel=0.01)
+
+
+def test_render_white_stimulus_rgb():
+    df = pd.DataFrame(
+        [
+            {
+                "Monkey": "Gandalf",
+                "Date": "29/5/2018",
+                "Session": "a",
+                "cortex file": "gan_2018_05_29a.1",
+                "stimulus (need to check r/d)": "cond1: white point 0.1 diameter",
+                "Stimulus Position": "(0.6,-0.75)",
+            }
+        ]
+    )
+    spec = parse_stimulus_rows(df, monkey="gandalf")[0]
+    assert spec.color == "white"
+    image = render_stimulus(spec, RenderConfig())
+    unique = np.unique(image.reshape(-1, 3), axis=0)
+    assert [255, 0, 0] not in unique.tolist()
+    assert [255, 255, 255] in unique.tolist()
 
 
 def test_render_stimulus_shape():

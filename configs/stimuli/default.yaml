@@ -8,6 +8,7 @@ canvas_size: 224
 quadrant_extent_deg: 6.0
 pixels_per_deg: 37.333333333333336
 background_gray: 128
+# Fallback bar length when the catalog row omits an explicit size (e.g. "black bar vertical").
 bar_length_deg: 0.3
 bar_width_px: 1
 contour_width_px: 1

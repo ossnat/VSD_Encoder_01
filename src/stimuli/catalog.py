@@ -101,9 +101,11 @@ def _parse_stimulus_text(text: str, *, bar_length_deg: float) -> tuple[str, str,
     if "filled circle" in lower or ("circle" in lower and "contour" not in lower):
         return color, "filled_circle", size_deg, False
     if "bar vertical" in lower or "vertical bar" in lower:
-        return color, "bar_vertical", bar_length_deg, False
+        length = size_deg if size_deg is not None else bar_length_deg
+        return color, "bar_vertical", length, False
     if "bar horizontal" in lower or "horizontal bar" in lower:
-        return color, "bar_horizontal", bar_length_deg, False
+        length = size_deg if size_deg is not None else bar_length_deg
+        return color, "bar_horizontal", length, False
 
     raise ValueError(f"Unrecognized stimulus description: {text!r}")
 

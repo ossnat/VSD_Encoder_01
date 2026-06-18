@@ -25,11 +25,11 @@ class RenderConfig:
     draw_fixation: bool = False
 
 
-def _color_value(name: str) -> int:
+def _color_rgb(name: str) -> tuple[int, int, int]:
     if name == "white":
-        return 255
+        return (255, 255, 255)
     if name == "black":
-        return 0
+        return (0, 0, 0)
     raise ValueError(f"Unsupported color: {name!r}")
 
 
@@ -63,11 +63,11 @@ def _draw_point(
         raise ValueError(f"Point stimulus missing size: {spec.stimulus_text}")
     x_px, y_px = _deg_point_to_px(spec.pos_x_deg, spec.pos_y_deg, cfg)
     radius_px = _size_to_radius_px(spec.size_deg, cfg)
-    fill = _color_value(spec.color)
+    color = _color_rgb(spec.color)
     draw.ellipse(
         (x_px - radius_px, y_px - radius_px, x_px + radius_px, y_px + radius_px),
-        fill=fill,
-        outline=fill,
+        fill=color,
+        outline=color,
     )
 
 
@@ -78,11 +78,11 @@ def _draw_filled_circle(
         raise ValueError(f"Circle stimulus missing size: {spec.stimulus_text}")
     x_px, y_px = _deg_point_to_px(spec.pos_x_deg, spec.pos_y_deg, cfg)
     radius_px = _size_to_radius_px(spec.size_deg, cfg)
-    fill = _color_value(spec.color)
+    color = _color_rgb(spec.color)
     draw.ellipse(
         (x_px - radius_px, y_px - radius_px, x_px + radius_px, y_px + radius_px),
-        fill=fill,
-        outline=fill,
+        fill=color,
+        outline=color,
     )
 
 
@@ -93,7 +93,7 @@ def _draw_circle_contour(
         raise ValueError(f"Contour circle missing size: {spec.stimulus_text}")
     x_px, y_px = _deg_point_to_px(spec.pos_x_deg, spec.pos_y_deg, cfg)
     radius_px = _size_to_radius_px(spec.size_deg, cfg)
-    outline = _color_value(spec.color)
+    outline = _color_rgb(spec.color)
     width = cfg.contour_width_px
     draw.ellipse(
         (x_px - radius_px, y_px - radius_px, x_px + radius_px, y_px + radius_px),
@@ -114,7 +114,7 @@ def _draw_triangle_contour(
     for angle_deg in (90, 210, 330):
         rad = math.radians(angle_deg)
         pts.append((x_px + radius_px * math.cos(rad), y_px - radius_px * math.sin(rad)))
-    outline = _color_value(spec.color)
+    outline = _color_rgb(spec.color)
     closed = pts + [pts[0]]
     draw.line(closed, fill=outline, width=cfg.contour_width_px)
 
@@ -136,7 +136,7 @@ def _draw_bar(
         right = x_px + length_px / 2.0
         top = y_px - width_px / 2.0
         bottom = y_px + width_px / 2.0
-    draw.rectangle((left, top, right, bottom), fill=_color_value(spec.color))
+    draw.rectangle((left, top, right, bottom), fill=_color_rgb(spec.color))
 
 
 def render_stimulus(spec: StimulusSpec, cfg: RenderConfig | None = None) -> np.ndarray:

@@ -2,8 +2,8 @@
 
 monkey: gandalf
 
-split_csv: Data/FoundationData/ProcessedData/splits/split_v3_seed17_session_condition_group.csv
-trials_index_csv: Data/FoundationData/ProcessedData/splits/all_trials_index.csv
+split_csv: Data/FoundationData/ProcessedData/splits/split_v3_seed17_session_condition_group_gandalf.csv
+trials_index_csv: Data/FoundationData/ProcessedData/splits/all_trials_index_gandalf.csv
 
 spatial_size: [100, 100]
 
@@ -19,3 +19,4 @@ paths:
   stimuli_plots_root: plots/stimuli
   ridge_plots_root: plots/ridge_encode
   vsd_vs_stimulus_plots_root: plots/vsd_vs_stimulus
+  evaluation_plots_root: plots/evaluation

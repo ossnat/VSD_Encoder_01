@@ -1,4 +1,4 @@
-# Per-pixel mean over frames [30, 50) — half-open slice.
+# Per-pixel mean over frames [32, 37) — half-open slice.
 
 window_id: win_0032_0037
 start_frame: 32

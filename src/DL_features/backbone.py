@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import torch
 import torch.nn as nn
 from torchvision.models import (
@@ -13,8 +15,9 @@ from torchvision.models import (
     resnet50,
 )
 
+from src.DL_features.gabor_gwp import build_gabor_gwp_extractor
+
 # Activation maps after each ResNet stage (post-ReLU block output).
-# avgpool = last map before the original FC classifier.
 FEATURE_LAYERS: tuple[str, ...] = ("layer1", "layer2", "layer3", "layer4", "avgpool")
 DEFAULT_FEATURE_LAYER = "layer3"
 
@@ -77,18 +80,53 @@ def _load_resnet(name: str, pretrained: bool) -> nn.Module:
     if key == "resnet50":
         weights = ResNet50_Weights.DEFAULT if pretrained else None
         return resnet50(weights=weights)
-    raise ValueError(f"Unsupported backbone: {name!r}")
+    raise ValueError(f"Unsupported ResNet backbone: {name!r}")
+
+
+def _resolve_feature_layer(model_cfg: dict[str, Any]) -> str:
+    layer = model_cfg.get("feature_layer", DEFAULT_FEATURE_LAYER)
+    backbone_type = model_cfg.get("type", "resnet")
+    if backbone_type == "gabor_gwp" and layer in (None, "default", "energy"):
+        return "energy"
+    return str(layer)
 
 
 def build_feature_extractor(
-    name: str,
+    model_cfg: dict[str, Any] | str,
     *,
     pretrained: bool = True,
-    feature_layer: str = DEFAULT_FEATURE_LAYER,
-) -> ResNetFeatureExtractor:
-    """Return a frozen feature-map extractor for the requested ResNet stage."""
-    backbone = _load_resnet(name, pretrained)
-    model = ResNetFeatureExtractor(backbone, feature_layer=feature_layer)
+    feature_layer: str | None = None,
+) -> nn.Module:
+    """
+    Return a frozen feature-map extractor for the requested model config.
+
+    Accepts either a full model config dict or legacy ResNet name string.
+    """
+    if isinstance(model_cfg, str):
+        model_cfg = {
+            "type": "resnet",
+            "name": model_cfg,
+            "pretrained": pretrained,
+            "feature_layer": feature_layer or DEFAULT_FEATURE_LAYER,
+        }
+    else:
+        model_cfg = dict(model_cfg)
+        if feature_layer is not None:
+            model_cfg["feature_layer"] = feature_layer
+
+    backbone_type = model_cfg.get("type", "resnet")
+    layer = _resolve_feature_layer(model_cfg)
+
+    if backbone_type == "resnet":
+        name = model_cfg["name"]
+        pt = bool(model_cfg.get("pretrained", True))
+        backbone = _load_resnet(name, pt)
+        model = ResNetFeatureExtractor(backbone, feature_layer=layer)
+    elif backbone_type == "gabor_gwp":
+        model = build_gabor_gwp_extractor(model_cfg)
+    else:
+        raise ValueError(f"Unsupported backbone type: {backbone_type!r}")
+
     model.eval()
     return model
 

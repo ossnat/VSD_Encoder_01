@@ -1,0 +1,13 @@
+# Grid search for Gabor GWP hyperparameters (stage 06)
+
+base_model: configs/models/gabor_serre.yaml
+objective: r_mean_val
+
+output_root: Data/VSD_Encoder_01/grid_search/gwp
+
+# Cartesian product of all lists below (centered on gabor_serre defaults).
+param_grid:
+  gwp.min_wavelength: [3, 5, 7, 14]
+  gwp.wavelength_factor: [1.4142135623730951, 2.0]
+  pool_size: [14, 7]
+  gwp.kernel_size: [31]

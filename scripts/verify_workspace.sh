@@ -32,8 +32,8 @@ check_path() {
 ERR=0
 check_path "FoundationData root" "${WORKSPACE_ROOT}/Data/FoundationData/ProcessedData" || ERR=1
 check_path "EncoderData root" "${WORKSPACE_ROOT}/Data/EncoderData" || ERR=1
-check_path "Split CSV" "${WORKSPACE_ROOT}/Data/FoundationData/ProcessedData/splits/split_v3_seed17_session_condition_group.csv" || ERR=1
-check_path "Trials index" "${WORKSPACE_ROOT}/Data/FoundationData/ProcessedData/splits/all_trials_index.csv" || ERR=1
+check_path "Split CSV" "${WORKSPACE_ROOT}/Data/FoundationData/ProcessedData/splits/split_v3_seed17_session_condition_group_gandalf.csv" || ERR=1
+check_path "Trials index" "${WORKSPACE_ROOT}/Data/FoundationData/ProcessedData/splits/all_trials_index_gandalf.csv" || ERR=1
 
 N_H5=$(find "${WORKSPACE_ROOT}/Data/FoundationData/ProcessedData/${MONKEY}" -maxdepth 1 -name 'session_*.h5' 2>/dev/null | wc -l | tr -d ' ')
 if [[ "${N_H5}" -gt 0 ]]; then

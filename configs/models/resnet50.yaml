@@ -1,5 +1,7 @@
+type: resnet
 name: resnet50
 pretrained: true
+preprocess: imagenet_rgb
 
 feature_layer: layer3
 

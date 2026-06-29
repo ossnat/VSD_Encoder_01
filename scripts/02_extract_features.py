@@ -100,11 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         "feature_layer", DEFAULT_FEATURE_LAYER
     )
 
-    model = build_feature_extractor(
-        backbone_name,
-        pretrained=pretrained,
-        feature_layer=feature_layer,
-    )
+    model = build_feature_extractor(model_cfg, feature_layer=feature_layer)
 
     if args.device == "auto":
         device = default_device()
@@ -113,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
 
         device = torch.device(args.device)
 
-    model_name = model_slug(backbone_name, pretrained)
+    model_name = model_slug(model_cfg)
     out_dir = feature_dir(features_root, monkey, window_id, model_name, feature_layer)
     out_dir.mkdir(parents=True, exist_ok=True)
 

@@ -1,5 +1,7 @@
+type: resnet
 name: resnet18
 pretrained: true
+preprocess: imagenet_rgb
 
 # Spatial activation map after this ResNet stage (see docs/DL_feature_extraction.md).
 feature_layer: layer3

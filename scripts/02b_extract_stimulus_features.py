@@ -54,8 +54,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--feature-layer",
         type=str,
         default=None,
-        choices=FEATURE_LAYERS,
-        help=f"Override model config (default: {DEFAULT_FEATURE_LAYER})",
+        help=f"Override ResNet feature layer (choices: {', '.join(FEATURE_LAYERS)})",
     )
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--device", type=str, default="auto", help="auto|cpu|cuda|mps")
@@ -86,16 +85,14 @@ def main(argv: list[str] | None = None) -> int:
         raise RuntimeError("No stimuli to process in manifest")
 
     backbone_name = model_cfg["name"]
-    pretrained = bool(model_cfg.get("pretrained", True))
     feature_layer = args.feature_layer or model_cfg.get(
         "feature_layer", DEFAULT_FEATURE_LAYER
     )
+    backbone_type = model_cfg.get("type", "resnet")
+    if args.feature_layer and backbone_type != "resnet":
+        raise ValueError("--feature-layer override is only supported for ResNet models")
 
-    model = build_feature_extractor(
-        backbone_name,
-        pretrained=pretrained,
-        feature_layer=feature_layer,
-    )
+    model = build_feature_extractor(model_cfg, feature_layer=feature_layer)
 
     if args.device == "auto":
         device = default_device()
@@ -104,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
 
         device = torch.device(args.device)
 
-    model_name = model_slug(backbone_name, pretrained)
+    model_name = model_slug(model_cfg)
     out_dir = stimulus_feature_dir(features_root, monkey, model_name, feature_layer)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -117,6 +114,7 @@ def main(argv: list[str] | None = None) -> int:
         repo_root=repo,
         map_path_fn=path_fn,
         feature_layer=feature_layer,
+        model_cfg=model_cfg,
         input_size=int(model_cfg.get("input_size", 224)),
         imagenet_normalize=bool(model_cfg.get("imagenet_normalize", True)),
         batch_size=int(model_cfg.get("batch_size", 32)),
@@ -132,7 +130,9 @@ def main(argv: list[str] | None = None) -> int:
         "monkey": monkey,
         "model_name": backbone_name,
         "model_slug": model_name,
-        "pretrained": pretrained,
+        "model_type": backbone_type,
+        "pretrained": bool(model_cfg.get("pretrained", True)),
+        "preprocess": model_cfg.get("preprocess", "imagenet_rgb"),
         "feature_layer": feature_layer,
         "feature_shape": sample_shape,
         "input_size": int(model_cfg.get("input_size", 224)),

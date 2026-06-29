@@ -31,7 +31,7 @@ flowchart LR
 | 01c | `01c_build_encoding_pairs.py` | trial-level join manifest |
 | 02b | `02b_extract_stimulus_features.py` | CNN maps from stimuli |
 | 03 | `03_train_ridge_encoder.py` | RidgeCV model + QC plots |
-| 04 | `04_evaluate_ridge_encoder.py` | metrics + reconstructions *(planned)* |
+| 04 | `04_evaluate_pixel_correlation.py` | pixel-wise test correlation heatmaps |
 
 ## Training unit
 

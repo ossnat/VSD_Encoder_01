@@ -1,0 +1,22 @@
+type: gabor_gwp
+name: gabor_kay
+pretrained: false
+preprocess: grayscale_luminance
+feature_layer: energy
+
+input_size: 224
+imagenet_normalize: false
+batch_size: 32
+
+# REFERENCE ONLY — Kay et al. (2008) FOV-mapped scales for natural images.
+# Not used in the default pipeline. Use configs/models/gabor_serre.yaml instead.
+# See docs/gabor_gwp.md for the FOV → wavelength mapping.
+pool: avg
+pool_size: 14
+
+gwp:
+  number_of_scales: 5
+  number_of_directions: 8
+  kernel_size: 51
+  min_wavelength: 14.0
+  wavelength_factor: 2.0

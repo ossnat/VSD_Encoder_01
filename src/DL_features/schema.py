@@ -3,10 +3,32 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 
-def model_slug(name: str, pretrained: bool) -> str:
-    return f"{name.lower()}_{'imagenet' if pretrained else 'random'}"
+def model_slug(model_cfg_or_name: dict[str, Any] | str, pretrained: bool = True) -> str:
+    """
+    Stable directory slug for a model config or legacy ResNet name.
+
+    Examples: ``resnet18_imagenet``, ``gabor_serre_gwp``.
+    """
+    if isinstance(model_cfg_or_name, dict):
+        cfg = model_cfg_or_name
+        name = str(cfg["name"]).lower()
+        backbone_type = cfg.get("type", "resnet")
+        if backbone_type == "resnet":
+            pt = bool(cfg.get("pretrained", True))
+            return f"{name}_{'imagenet' if pt else 'random'}"
+        if backbone_type == "gabor_gwp":
+            base = f"{name}_gwp"
+            variant = cfg.get("variant")
+            if variant:
+                return f"{base}_{variant}"
+            return base
+        return name
+
+    name = str(model_cfg_or_name).lower()
+    return f"{name}_{'imagenet' if pretrained else 'random'}"
 
 
 def feature_dir(

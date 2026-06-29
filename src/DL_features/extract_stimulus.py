@@ -9,7 +9,7 @@ import pandas as pd
 import torch
 from PIL import Image
 
-from src.DL_features.preprocess import preprocess_stimulus_rgb
+from src.DL_features.preprocess import preprocess_stimulus
 from src.paths import resolve_data_path
 
 
@@ -24,6 +24,7 @@ def extract_stimulus_features(
     repo_root: Path,
     map_path_fn,
     feature_layer: str,
+    model_cfg: dict,
     input_size: int,
     imagenet_normalize: bool,
     batch_size: int,
@@ -109,8 +110,9 @@ def extract_stimulus_features(
 
         image_path = resolve_data_path(row.image_path, repo_root)
         image = np.asarray(Image.open(image_path).convert("RGB"), dtype=np.uint8)
-        tensor = preprocess_stimulus_rgb(
+        tensor = preprocess_stimulus(
             image,
+            model_cfg=model_cfg,
             input_size=input_size,
             imagenet_normalize=imagenet_normalize,
         )

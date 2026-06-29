@@ -80,3 +80,44 @@ def preprocess_stimulus_rgb(
     if imagenet_normalize:
         out = (out - IMAGENET_MEAN) / IMAGENET_STD
     return out
+
+
+def preprocess_stimulus_grayscale(
+    image: np.ndarray,
+    *,
+    input_size: int = 224,
+) -> torch.Tensor:
+    """Convert RGB stimulus to luminance tensor (1, S, S) in [0, 1]."""
+    if image.ndim != 3 or image.shape[2] != 3:
+        raise ValueError(f"Expected RGB image (H, W, 3), got shape={image.shape}")
+    rgb = image.astype(np.float32) / 255.0
+    luminance = (
+        0.2126 * rgb[..., 0] + 0.7152 * rgb[..., 1] + 0.0722 * rgb[..., 2]
+    )
+    tensor = torch.from_numpy(luminance).unsqueeze(0).unsqueeze(0)
+    h, w = int(tensor.shape[2]), int(tensor.shape[3])
+    if h != input_size or w != input_size:
+        tensor = F.interpolate(
+            tensor, size=(input_size, input_size), mode="bilinear", align_corners=False
+        )
+    return tensor.squeeze(0)
+
+
+def preprocess_stimulus(
+    image: np.ndarray,
+    *,
+    model_cfg: dict,
+    input_size: int = 224,
+    imagenet_normalize: bool = True,
+) -> torch.Tensor:
+    """Dispatch stimulus preprocessing based on model config."""
+    mode = model_cfg.get("preprocess", "imagenet_rgb")
+    if mode == "imagenet_rgb":
+        return preprocess_stimulus_rgb(
+            image,
+            input_size=input_size,
+            imagenet_normalize=imagenet_normalize,
+        )
+    if mode == "grayscale_luminance":
+        return preprocess_stimulus_grayscale(image, input_size=input_size)
+    raise ValueError(f"Unsupported preprocess mode: {mode!r}")

@@ -19,6 +19,7 @@ from src.evaluation.pixel_correlation import evaluate_pixel_correlation
 from src.evaluation.plotting import (
     plot_condition_mean_originals,
     plot_pixel_correlation_heatmap,
+    plot_pixel_mean_maps,
     plot_pixel_r2_heatmap,
 )
 from src.paths import project_root, resolve_data_path, workspace_root
@@ -62,9 +63,8 @@ def evaluate_pixel_correlation_run(
 
     model_cfg = _load_yaml(model_cfg_path)
     backbone_name = model_cfg["name"]
-    pretrained = bool(model_cfg.get("pretrained", True))
     feature_layer = model_cfg.get("feature_layer", "layer3")
-    model_name = model_slug(backbone_name, pretrained)
+    model_name = model_slug(model_cfg)
 
     pairs_path = encoding_pairs_manifest_path(
         resolve_data_path(cfg["paths"]["encoding_pairs_root"], repo),
@@ -112,7 +112,15 @@ def evaluate_pixel_correlation_run(
     result = payload["result"]
     result.spatial_size = spatial_size
 
-    corr_map, r2_map, cond_means, metrics = evaluate_pixel_correlation(
+    (
+        corr_map,
+        r2_map,
+        mean_original,
+        mean_reconstruction,
+        mean_diff,
+        cond_means,
+        metrics,
+    ) = evaluate_pixel_correlation(
         eval_df,
         result=result,
         repo=repo,
@@ -158,6 +166,19 @@ def evaluate_pixel_correlation_run(
         ),
     )
 
+    mean_maps_path = plot_dir / f"pixel_mean_maps_{split}.png"
+    plot_pixel_mean_maps(
+        mean_original,
+        mean_reconstruction,
+        mean_diff,
+        mean_maps_path,
+        title=(
+            f"Trial-mean maps ({split}) | "
+            f"RMSE = {metrics['rmse_mean_maps']:.4f} | "
+            f"T = {metrics['n_test_trials']}"
+        ),
+    )
+
     run_cfg = {
         "monkey": monkey,
         "window_id": window_id,
@@ -172,6 +193,7 @@ def evaluate_pixel_correlation_run(
         "plot_paths": {
             "pixel_correlation": str(corr_plot_path.relative_to(repo)),
             "pixel_r2": str(r2_plot_path.relative_to(repo)),
+            "pixel_mean_maps": str(mean_maps_path.relative_to(repo)),
             "condition_mean_originals": str(cond_mean_path.relative_to(repo)),
         },
         "created": datetime.now(timezone.utc).isoformat(),
@@ -186,9 +208,14 @@ def evaluate_pixel_correlation_run(
     print(f"Trials: {metrics['n_test_trials']} | conditions: {metrics['n_test_conditions']}")
     print(f"Mean r: {metrics['mean_r']:.4f} | median r: {metrics['median_r']:.4f}")
     print(f"Mean R²: {metrics['mean_r2']:.4f} | median R²: {metrics['median_r2']:.4f}")
+    print(
+        f"Mean-map RMSE: {metrics['rmse_mean_maps']:.4f} | "
+        f"mean |diff|: {metrics['mean_abs_diff']:.4f}"
+    )
     print(f"Plots:")
     print(f"  {corr_plot_path.relative_to(repo)}")
     print(f"  {r2_plot_path.relative_to(repo)}")
+    print(f"  {mean_maps_path.relative_to(repo)}")
     print(f"  {cond_mean_path.relative_to(repo)}")
     return run_cfg
 

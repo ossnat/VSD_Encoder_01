@@ -1,0 +1,26 @@
+type: gabor_gwp
+name: gabor_serre
+pretrained: false
+preprocess: grayscale_luminance
+feature_layer: energy
+
+input_size: 224
+imagenet_normalize: false
+batch_size: 32
+
+# Canonical GWP model for the encoding pipeline (stages 02b–06).
+# Finer spatial scales (min_wavelength=3 px) suit small geometric stimuli
+# (bars, circles, triangles) better than Kay FOV-mapped presets — see docs/gabor_gwp.md.
+#
+# Serre et al. (Nature 2007) style C1 energy — PyTorch fixed Gabor bank.
+# (PyPI `gwp` requires TensorFlow; not used on Python 3.14.)
+pool: avg
+pool_size: 14
+
+gwp:
+  number_of_scales: 5
+  number_of_directions: 8
+  kernel_size: 31
+  min_wavelength: 3.0
+  wavelength_factor: 1.4142135623730951
+  # energy_mode: sum_squares (default) | sqrt_contrast (Kay et al. 2008)

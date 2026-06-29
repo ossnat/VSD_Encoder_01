@@ -175,6 +175,9 @@ def evaluate_pixel_correlation(
     )
     corr_map = pixel_correlation_across_trials(originals, reconstructions)
     r2_map = pixel_r2_across_trials(originals, reconstructions)
+    mean_original = np.nanmean(originals, axis=0).astype(np.float32)
+    mean_reconstruction = np.nanmean(reconstructions, axis=0).astype(np.float32)
+    mean_diff = (mean_reconstruction - mean_original).astype(np.float32)
     cond_means = condition_mean_original_maps(eval_df, originals)
     metrics: dict[str, float | int] = {
         "n_test_trials": int(len(eval_df)),
@@ -186,5 +189,7 @@ def evaluate_pixel_correlation(
         "mean_r2": float(np.nanmean(r2_map)),
         "median_r2": float(np.nanmedian(r2_map)),
         "frac_finite_pixels": float(np.isfinite(corr_map).mean()),
+        "mean_abs_diff": float(np.nanmean(np.abs(mean_diff))),
+        "rmse_mean_maps": float(np.sqrt(np.nanmean(mean_diff**2))),
     }
-    return corr_map, r2_map, cond_means, metrics
+    return corr_map, r2_map, mean_original, mean_reconstruction, mean_diff, cond_means, metrics

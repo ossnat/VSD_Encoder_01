@@ -59,6 +59,40 @@ def plot_pixel_r2_heatmap(
     )
 
 
+def plot_pixel_mean_maps(
+    mean_original: np.ndarray,
+    mean_reconstruction: np.ndarray,
+    mean_diff: np.ndarray,
+    output_path: Path,
+    *,
+    title: str,
+) -> Path:
+    """Side-by-side trial-mean original, reconstruction, and difference maps."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fig, axes = plt.subplots(1, 3, figsize=(11, 3.8))
+
+    vmin, vmax = _shared_limits([mean_original, mean_reconstruction])
+    diff_lim = float(np.nanpercentile(np.abs(mean_diff), 99))
+    diff_lim = diff_lim if diff_lim > 1e-8 else 1.0
+
+    panels = [
+        (mean_original, "Trial-mean original", "viridis", vmin, vmax),
+        (mean_reconstruction, "Trial-mean reconstruction", "viridis", vmin, vmax),
+        (mean_diff, "Mean recon − original", "RdBu_r", -diff_lim, diff_lim),
+    ]
+    for ax, (img, subtitle, cmap, lo, hi) in zip(axes, panels):
+        im = ax.imshow(img, cmap=cmap, vmin=lo, vmax=hi)
+        ax.set_title(subtitle, fontsize=10)
+        ax.axis("off")
+        fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+
+    fig.suptitle(title, fontsize=11)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
 def plot_condition_mean_originals(
     conditions: list[dict[str, object]],
     output_path: Path,

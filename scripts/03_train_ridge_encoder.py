@@ -98,9 +98,8 @@ def train_ridge_encoder(
 
     model_cfg = _load_yaml(model_cfg_path)
     backbone_name = model_cfg["name"]
-    pretrained = bool(model_cfg.get("pretrained", True))
     feature_layer = model_cfg.get("feature_layer", "layer3")
-    model_name = model_slug(backbone_name, pretrained)
+    model_name = model_slug(model_cfg)
 
     pairs_path = encoding_pairs_manifest_path(
         resolve_data_path(cfg["paths"]["encoding_pairs_root"], repo),

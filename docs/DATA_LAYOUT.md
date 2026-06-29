@@ -131,11 +131,15 @@ img = data[:, frame_idx].reshape(100, 100)   # one frame → 100×100
 ```
 Data/FoundationData/ProcessedData/splits/
 ├── all_trials_index.csv              # master list of all trials (no split column)
-├── split_v3_seed17_session_condition_group.csv   # current recommended split
+├── all_trials_index_gandalf.csv      # gandalf-only index (encoder default)
+├── split_v3_seed17_session_condition_group.csv   # global v3 split
+├── split_v3_seed17_session_condition_group_gandalf.csv   # gandalf v3 split (encoder default)
 ├── baseline_stats_v3_seed17_session_condition_group.json
 ├── baseline_stats_v3_seed17_session_condition_group.h5
 └── split_v2_seed17_session_split.csv # legacy (session-level holdout)
 ```
+
+The encoder project (`VSD_Encoder_01`) uses the **gandalf** split and index files by default (`configs/default.yaml`).
 
 ### `all_trials_index.csv`
 

@@ -80,8 +80,13 @@ def collect_backbone_metrics(
             "r_mean_train": ridge_metrics.get("r_mean_train"),
             "r_mean_val": ridge_metrics.get("r_mean_val"),
             "r_mean_test": ridge_metrics.get("r_mean_test"),
+            "r_mean_train_masked": ridge_metrics.get("r_mean_train_masked"),
+            "r_mean_val_masked": ridge_metrics.get("r_mean_val_masked"),
+            "r_mean_test_masked": ridge_metrics.get("r_mean_test_masked"),
             "eval_mean_r": eval_metrics.get("mean_r"),
             "eval_mean_r2": eval_metrics.get("mean_r2"),
+            "eval_mean_r_masked": eval_metrics.get("mean_r_masked"),
+            "eval_mean_r2_masked": eval_metrics.get("mean_r2_masked"),
             "eval_n_trials": eval_metrics.get("n_test_trials"),
             "feature_shape": feature_shape,
             "ridge_dir": str(ridge_dir.relative_to(repo.parent))

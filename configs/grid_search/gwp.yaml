@@ -5,9 +5,10 @@ objective: r_mean_val
 
 output_root: Data/VSD_Encoder_01/grid_search/gwp
 
-# Cartesian product of all lists below (centered on gabor_serre defaults).
+# Gamma sweep with gabor_serre defaults fixed (pool_size=14, min_wavelength=3, etc.).
 param_grid:
-  gwp.min_wavelength: [3, 5, 7, 14]
-  gwp.wavelength_factor: [1.4142135623730951, 2.0]
-  pool_size: [14, 7]
+  gwp.gamma: [0.3, 0.4, 0.5, 0.6, 0.7]
+  gwp.min_wavelength: [3]
+  gwp.wavelength_factor: [1.4142135623730951]
+  pool_size: [14]
   gwp.kernel_size: [31]

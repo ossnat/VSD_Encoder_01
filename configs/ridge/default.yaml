@@ -9,3 +9,10 @@ plot_one_per_condition: true
 plot_prefer_split: test
 rows_per_grid_page: 12
 recon_grid_ncol: 4
+
+# Masked evaluation (stage 03 trial-wise r, stage 04 pixel metrics).
+# Center and geometry match VSD foundation model crop_loss circle.
+evaluation:
+  use_mask: true
+  mask_type: circle
+  mask_radius: 50

@@ -18,6 +18,8 @@ Wavelengths per scale: ≈ 3, 4.2, 6, 8.5, 12 px.
 
 `gwp.energy_mode`: `sum_squares` (default) or `sqrt_contrast` (Kay-style √(even²+odd²)).
 
+| `gwp.gamma` | **0.5** (default) | Gabor envelope aspect ratio; grid search sweeps **0.3–0.7** |
+
 ### Spatial pooling (`pool: avg`, `pool_size: 14`)
 
 **GWP does not require 14×14 pooling.** ResNet `layer3` on 224×224 input *natively* outputs 14×14 maps; we added pooling to GWP for a different reason:
@@ -90,7 +92,9 @@ plots/evaluation/{monkey}/{window}/{model_slug}/{feature_layer}/
 | Column | Source |
 |--------|--------|
 | `r_mean_val`, `r_mean_test` | `ridge_encode/.../metrics.json` (stage 03) |
+| `r_mean_val_masked`, `r_mean_test_masked` | Same, inside evaluation disk when mask enabled |
 | `eval_mean_r`, `eval_mean_r2` | `pixel_evaluation_test.json` (stage 04) |
+| `eval_mean_r_masked`, `eval_mean_r2_masked` | Pixel metrics inside evaluation disk |
 
 ## Grid search (stage 06)
 
@@ -102,7 +106,7 @@ scripts/py scripts/06_grid_search_gwp.py --window configs/windows/evoked_32_42.y
 
 - **Base model:** `configs/models/gabor_serre.yaml`
 - **Objective:** `r_mean_val`
-- **Grid:** `configs/grid_search/gwp.yaml` — explores `min_wavelength` around 3 px plus coarser alternatives
+- **Grid:** `configs/grid_search/gwp.yaml` — currently a **gamma sweep** (0.3–0.7) with other `gabor_serre` defaults fixed (`pool_size=14`, `min_wavelength=3`, …)
 - **Outputs:** `Data/VSD_Encoder_01/grid_search/gwp/{monkey}/{window}/`
 
 If a grid combo beats the default, merge the winning values into `gabor_serre.yaml` (or save a new variant config) — do not switch to `gabor_kay2008.yaml`.

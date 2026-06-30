@@ -5,7 +5,7 @@ import torch
 from PIL import Image
 
 from src.DL_features.backbone import build_feature_extractor
-from src.DL_features.gabor_gwp import GaborWaveletPyramid
+from src.DL_features.gabor_gwp import GaborWaveletPyramid, _build_gabor_bank
 from src.DL_features.preprocess import preprocess_stimulus
 from src.DL_features.schema import model_slug
 
@@ -23,6 +23,18 @@ def test_model_slug_gabor():
 def test_model_slug_gabor_variant():
     cfg = {"type": "gabor_gwp", "name": "gabor_serre", "variant": "wl14_pf2"}
     assert model_slug(cfg) == "gabor_serre_gwp_wl14_pf2"
+
+
+def test_gabor_gamma_changes_bank():
+    bank_lo = _build_gabor_bank(
+        n_scales=1, n_orientations=1, kernel_size=15,
+        min_wavelength=4.0, wavelength_factor=1.414, gamma=0.3,
+    )
+    bank_hi = _build_gabor_bank(
+        n_scales=1, n_orientations=1, kernel_size=15,
+        min_wavelength=4.0, wavelength_factor=1.414, gamma=0.7,
+    )
+    assert not np.allclose(bank_lo, bank_hi)
 
 
 def test_gabor_sqrt_energy():

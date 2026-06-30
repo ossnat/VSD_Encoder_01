@@ -33,6 +33,26 @@ flowchart LR
 | 03 | `03_train_ridge_encoder.py` | RidgeCV model + QC plots |
 | 04 | `04_evaluate_pixel_correlation.py` | pixel-wise test correlation heatmaps |
 
+## Evaluation mask
+
+Stage 03 and 04 can restrict metrics to a centered circular region on the 100×100 VSD map (corners are often noise). Configuration lives in `configs/ridge/default.yaml`:
+
+```yaml
+evaluation:
+  use_mask: true
+  mask_type: circle
+  mask_radius: 50   # pixels; full frame height on 100×100 maps
+```
+
+When enabled:
+
+| Metric | Description |
+|--------|-------------|
+| `r_mean_{split}_masked` | Trial-wise Pearson r over in-disk pixels only (stage 03) |
+| `mean_r_masked`, `mean_r2_masked` | Pixel-wise r/R² averaged over the disk (stage 04) |
+
+Unmasked metrics (`r_mean_{split}`, `mean_r`) are still written for comparison. Geometry matches `VSD_foundation_model` `mae_system.MaskedReconstructionLoss` (center at H/2, W/2).
+
 ## Training unit
 
 **Trial-level encoding** (many trials per condition):

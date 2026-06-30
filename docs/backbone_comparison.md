@@ -47,8 +47,10 @@ plots/evaluation/{monkey}/{window_id}/backbone_comparison/
 | `model_slug` | Model config (`resnet18_imagenet`, `gabor_serre_gwp`, …) |
 | `feature_layer` | e.g. `layer3`, `energy` |
 | `alpha` | RidgeCV selected regularization |
-| `r_mean_train/val/test` | Trial-wise Pearson r from stage 03 |
-| `eval_mean_r`, `eval_mean_r2` | Pixel-wise metrics from stage 04 |
+| `r_mean_train/val/test` | Trial-wise Pearson r from stage 03 (full map) |
+| `r_mean_*_masked` | Same, restricted to evaluation disk when `evaluation.use_mask` is true |
+| `eval_mean_r`, `eval_mean_r2` | Pixel-wise metrics from stage 04 (full map) |
+| `eval_mean_r_masked`, `eval_mean_r2_masked` | Pixel-wise metrics inside evaluation disk |
 | `feature_shape` | `(C, H, W)` from stimulus feature extraction |
 
 ## Model configs

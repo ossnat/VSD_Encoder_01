@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 
 from src.data.trial_frames import load_h5_mean_frame
-from src.encoding.ridge import build_xy, predict_maps
-from src.encoding.ridge import RidgeEncodeResult
+from src.encoding.ridge import RidgeEncodeResult, build_xy, predict_maps
+from src.evaluation.mask import apply_mask_nan, masked_map_summary
 
 
 def pixel_correlation_across_trials(
@@ -149,6 +149,8 @@ def evaluate_pixel_correlation(
     start_frame: int,
     end_frame: int,
     avg_method: str,
+    mask: np.ndarray | None = None,
+    mask_radius: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray, list[dict[str, object]], dict[str, float | int]]:
     """
     Compute pixel-wise r and R² between trial-mean originals and reconstructions.
@@ -192,4 +194,23 @@ def evaluate_pixel_correlation(
         "mean_abs_diff": float(np.nanmean(np.abs(mean_diff))),
         "rmse_mean_maps": float(np.sqrt(np.nanmean(mean_diff**2))),
     }
+    if mask is not None:
+        corr_masked = apply_mask_nan(corr_map, mask)
+        r2_masked = apply_mask_nan(r2_map, mask)
+        diff_masked = apply_mask_nan(mean_diff, mask)
+        r_summary = masked_map_summary(corr_map, mask)
+        r2_summary = masked_map_summary(r2_map, mask)
+        if mask_radius is not None:
+            metrics["mask_radius"] = int(mask_radius)
+        metrics["n_masked_pixels"] = int(mask.sum())
+        metrics["mean_r_masked"] = r_summary["mean"]
+        metrics["median_r_masked"] = r_summary["median"]
+        metrics["mean_r2_masked"] = r2_summary["mean"]
+        metrics["median_r2_masked"] = r2_summary["median"]
+        metrics["mean_abs_diff_masked"] = float(np.nanmean(np.abs(diff_masked)))
+        metrics["rmse_mean_maps_masked"] = float(
+            np.sqrt(np.nanmean(diff_masked**2))
+        )
+        corr_map = corr_masked
+        r2_map = r2_masked
     return corr_map, r2_map, mean_original, mean_reconstruction, mean_diff, cond_means, metrics

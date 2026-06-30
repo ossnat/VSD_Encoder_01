@@ -15,6 +15,7 @@ import yaml
 from src.DL_features.schema import model_slug
 from src.encoding.ridge import attach_feature_paths
 from src.encoding.schema import encoding_pairs_manifest_path, ridge_output_dir
+from src.evaluation.mask import mask_from_eval_cfg
 from src.evaluation.pixel_correlation import evaluate_pixel_correlation
 from src.evaluation.plotting import (
     plot_condition_mean_originals,
@@ -60,6 +61,10 @@ def evaluate_pixel_correlation_run(
     end_frame = int(cfg["end_frame"])
     window_id = cfg.get("window_id") or f"win_{start_frame:04d}_{end_frame:04d}"
     avg_method = cfg.get("avg_method", "mean")
+    ridge_cfg = cfg["ridge"]
+    eval_cfg = ridge_cfg.get("evaluation", {})
+    eval_mask = mask_from_eval_cfg(eval_cfg, spatial_size)
+    mask_radius = int(eval_cfg["mask_radius"]) if eval_mask is not None else None
 
     model_cfg = _load_yaml(model_cfg_path)
     backbone_name = model_cfg["name"]
@@ -128,6 +133,8 @@ def evaluate_pixel_correlation_run(
         start_frame=start_frame,
         end_frame=end_frame,
         avg_method=avg_method,
+        mask=eval_mask,
+        mask_radius=mask_radius,
     )
 
     plots_root = repo / cfg["paths"].get("evaluation_plots_root", "plots/evaluation")
@@ -135,24 +142,28 @@ def evaluate_pixel_correlation_run(
     plot_dir.mkdir(parents=True, exist_ok=True)
 
     corr_plot_path = plot_dir / f"pixel_correlation_{split}.png"
+    title_r = metrics.get("mean_r_masked", metrics["mean_r"])
     plot_pixel_correlation_heatmap(
         corr_map,
         corr_plot_path,
         title=(
             f"Pixel correlation ({split}) | "
-            f"mean r = {metrics['mean_r']:.3f} | "
-            f"T = {metrics['n_test_trials']}"
+            f"mean r = {title_r:.3f}"
+            + (f" (masked r={metrics['mask_radius']})" if eval_mask is not None else "")
+            + f" | T = {metrics['n_test_trials']}"
         ),
     )
 
     r2_plot_path = plot_dir / f"pixel_r2_{split}.png"
+    title_r2 = metrics.get("mean_r2_masked", metrics["mean_r2"])
     plot_pixel_r2_heatmap(
         r2_map,
         r2_plot_path,
         title=(
             f"Pixel R² ({split}) | "
-            f"mean R² = {metrics['mean_r2']:.3f} | "
-            f"T = {metrics['n_test_trials']}"
+            f"mean R² = {title_r2:.3f}"
+            + (f" (masked r={metrics['mask_radius']})" if eval_mask is not None else "")
+            + f" | T = {metrics['n_test_trials']}"
         ),
     )
 
@@ -208,6 +219,13 @@ def evaluate_pixel_correlation_run(
     print(f"Trials: {metrics['n_test_trials']} | conditions: {metrics['n_test_conditions']}")
     print(f"Mean r: {metrics['mean_r']:.4f} | median r: {metrics['median_r']:.4f}")
     print(f"Mean R²: {metrics['mean_r2']:.4f} | median R²: {metrics['median_r2']:.4f}")
+    if eval_mask is not None:
+        print(
+            f"Masked (r={mask_radius}): "
+            f"mean r = {metrics['mean_r_masked']:.4f} | "
+            f"mean R² = {metrics['mean_r2_masked']:.4f} | "
+            f"n_pixels = {metrics['n_masked_pixels']}"
+        )
     print(
         f"Mean-map RMSE: {metrics['rmse_mean_maps']:.4f} | "
         f"mean |diff|: {metrics['mean_abs_diff']:.4f}"

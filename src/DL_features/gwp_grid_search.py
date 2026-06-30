@@ -24,6 +24,7 @@ from src.encoding.ridge import (
     predict_maps,
 )
 from src.encoding.schema import encoding_pairs_manifest_path, ridge_output_dir
+from src.evaluation.mask import mask_from_eval_cfg, masked_pearson_r
 from src.paths import resolve_data_path
 from src.stimuli.schema import manifest_path as stimulus_manifest_path
 
@@ -80,6 +81,7 @@ def _mean_split_r(
     result,
     repo: Path,
     spatial_size: tuple[int, int],
+    eval_mask: np.ndarray | None = None,
 ) -> float:
     split_df = pairs[pairs["split"] == split]
     if split_df.empty:
@@ -87,7 +89,13 @@ def _mean_split_r(
     x_split, y_split = build_xy(split_df, repo=repo, spatial_size=spatial_size)
     preds = predict_maps(result, x_split, spatial_size)
     y_true = y_split.reshape(len(split_df), *spatial_size)
-    rs = [pearson_r(y_true[i], preds[i]) for i in range(len(split_df))]
+    if eval_mask is not None:
+        rs = [
+            masked_pearson_r(y_true[i], preds[i], eval_mask)
+            for i in range(len(split_df))
+        ]
+    else:
+        rs = [pearson_r(y_true[i], preds[i]) for i in range(len(split_df))]
     return float(np.nanmean(rs))
 
 
@@ -109,6 +117,7 @@ def run_gwp_trial(
     spatial_size = tuple(int(x) for x in cfg["spatial_size"])
     feature_layer = str(model_cfg.get("feature_layer", "energy"))
     slug = model_slug(model_cfg)
+    eval_mask = mask_from_eval_cfg(ridge_cfg.get("evaluation"), spatial_size)
 
     stimuli_root = resolve_data_path(cfg["paths"]["stimuli_root"], repo)
     features_root = resolve_data_path(cfg["paths"]["dl_features_stimuli_root"], repo)
@@ -183,12 +192,37 @@ def run_gwp_trial(
         "alpha": float(result.alpha),
         "n_train": int(len(train_df)),
         "r_mean_train": _mean_split_r(
-            pairs, split="train", result=result, repo=repo, spatial_size=spatial_size
+            pairs,
+            split="train",
+            result=result,
+            repo=repo,
+            spatial_size=spatial_size,
         ),
         "r_mean_val": _mean_split_r(
-            pairs, split="val", result=result, repo=repo, spatial_size=spatial_size
+            pairs,
+            split="val",
+            result=result,
+            repo=repo,
+            spatial_size=spatial_size,
         ),
     }
+    if eval_mask is not None:
+        metrics["r_mean_train_masked"] = _mean_split_r(
+            pairs,
+            split="train",
+            result=result,
+            repo=repo,
+            spatial_size=spatial_size,
+            eval_mask=eval_mask,
+        )
+        metrics["r_mean_val_masked"] = _mean_split_r(
+            pairs,
+            split="val",
+            result=result,
+            repo=repo,
+            spatial_size=spatial_size,
+            eval_mask=eval_mask,
+        )
     with (ridge_dir / "grid_search_metrics.json").open("w") as f:
         json.dump(metrics, f, indent=2)
     return metrics

@@ -40,6 +40,7 @@ def _build_gabor_bank(
     kernel_size: int,
     min_wavelength: float,
     wavelength_factor: float,
+    gamma: float = 0.5,
 ) -> np.ndarray:
     """Quadrature pairs: even/odd phase per scale and orientation -> (C, 1, K, K)."""
     kernels: list[np.ndarray] = []
@@ -47,7 +48,6 @@ def _build_gabor_bank(
     for scale_idx in range(n_scales):
         lambd = min_wavelength * (wavelength_factor**scale_idx)
         sigma = 0.56 * lambd
-        gamma = 0.5
         for theta in thetas:
             for psi in (0.0, math.pi / 2.0):
                 kernels.append(
@@ -79,6 +79,7 @@ class GaborWaveletPyramid(nn.Module):
         kernel_size: int = 31,
         min_wavelength: float = 3.0,
         wavelength_factor: float = math.sqrt(2.0),
+        gamma: float = 0.5,
         padding: str = "same",
         energy_mode: str = "sum_squares",
     ) -> None:
@@ -97,6 +98,7 @@ class GaborWaveletPyramid(nn.Module):
             kernel_size=kernel_size,
             min_wavelength=min_wavelength,
             wavelength_factor=wavelength_factor,
+            gamma=gamma,
         )
         n_pairs = bank.shape[0]
         if n_pairs != 2 * self.n_scales * self.n_orientations:
@@ -175,6 +177,7 @@ def build_gabor_gwp_extractor(model_cfg: dict) -> nn.Module:
         kernel_size=int(gwp_cfg.get("kernel_size", 31)),
         min_wavelength=float(gwp_cfg.get("min_wavelength", 3.0)),
         wavelength_factor=float(gwp_cfg.get("wavelength_factor", 2**0.5)),
+        gamma=float(gwp_cfg.get("gamma", 0.5)),
         padding=str(gwp_cfg.get("padding", "same")),
         energy_mode=str(gwp_cfg.get("energy_mode", "sum_squares")),
     )

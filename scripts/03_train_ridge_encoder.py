@@ -28,6 +28,7 @@ from src.encoding.ridge import (
     pearson_r,
     predict_maps,
 )
+from src.evaluation.mask import mask_from_eval_cfg, masked_pearson_r
 from src.encoding.ridge_plotting import (
     plot_bias_map,
     plot_reconstructed_only_grid,
@@ -95,6 +96,8 @@ def train_ridge_encoder(
     window_id = cfg.get("window_id") or f"win_{start_frame:04d}_{end_frame:04d}"
     avg_method = cfg.get("avg_method", "mean")
     ridge_cfg = cfg["ridge"]
+    eval_cfg = ridge_cfg.get("evaluation", {})
+    eval_mask = mask_from_eval_cfg(eval_cfg, spatial_size)
 
     model_cfg = _load_yaml(model_cfg_path)
     backbone_name = model_cfg["name"]
@@ -168,13 +171,18 @@ def train_ridge_encoder(
         x_split, y_split = build_xy(split_df, repo=repo, spatial_size=spatial_size)
         preds = predict_maps(result, x_split, spatial_size)
         y_true = y_split.reshape(len(split_df), *spatial_size)
-        rs = [
-            pearson_r(y_true[i], preds[i])
-            for i in range(len(split_df))
-        ]
+        if eval_mask is not None:
+            rs_unmasked = [pearson_r(y_true[i], preds[i]) for i in range(len(split_df))]
+            rs = [masked_pearson_r(y_true[i], preds[i], eval_mask) for i in range(len(split_df))]
+            metrics[f"r_mean_{split_name}"] = float(np.nanmean(rs_unmasked))
+            metrics[f"r_median_{split_name}"] = float(np.nanmedian(rs_unmasked))
+            metrics[f"r_mean_{split_name}_masked"] = float(np.nanmean(rs))
+            metrics[f"r_median_{split_name}_masked"] = float(np.nanmedian(rs))
+        else:
+            rs = [pearson_r(y_true[i], preds[i]) for i in range(len(split_df))]
+            metrics[f"r_mean_{split_name}"] = float(np.nanmean(rs))
+            metrics[f"r_median_{split_name}"] = float(np.nanmedian(rs))
         split_scores[str(split_name)] = rs
-        metrics[f"r_mean_{split_name}"] = float(np.nanmean(rs))
-        metrics[f"r_median_{split_name}"] = float(np.nanmedian(rs))
 
     metrics["split_r"] = split_scores
 
@@ -269,6 +277,15 @@ def train_ridge_encoder(
         title=f"VSD vs stimulus | {window_id}",
     )
 
+    if eval_mask is not None:
+        eval_radius = int(eval_cfg.get("mask_radius", 0))
+        metrics["evaluation_mask"] = {
+            "use_mask": True,
+            "mask_type": str(eval_cfg.get("mask_type", "circle")),
+            "mask_radius": eval_radius,
+            "n_masked_pixels": int(eval_mask.sum()),
+        }
+
     run_cfg = {
         "monkey": monkey,
         "window_id": window_id,
@@ -294,7 +311,14 @@ def train_ridge_encoder(
     print(f"Selected alpha: {result.alpha}")
     print(f"Train trials: {len(train_df)} | Eval trials: {len(eval_df)}")
     for split_name, rs in split_scores.items():
-        print(f"  r ({split_name}): mean={np.nanmean(rs):.3f} median={np.nanmedian(rs):.3f}")
+        line = f"  r ({split_name}): mean={np.nanmean(rs):.3f} median={np.nanmedian(rs):.3f}"
+        masked_key = f"r_mean_{split_name}_masked"
+        if masked_key in metrics:
+            line += (
+                f" | masked mean={metrics[masked_key]:.3f}"
+                f" median={metrics[f'r_median_{split_name}_masked']:.3f}"
+            )
+        print(line)
     print(f"Model: {_portable_path(out_dir / 'model.joblib', repo)}")
     print(f"Plots: {plot_dir.relative_to(repo)} ({len(grid_samples)} conditions)")
     return run_cfg

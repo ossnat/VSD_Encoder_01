@@ -23,4 +23,5 @@ gwp:
   kernel_size: 31
   min_wavelength: 3.0
   wavelength_factor: 1.4142135623730951
+  gamma: 0.5
   # energy_mode: sum_squares (default) | sqrt_contrast (Kay et al. 2008)

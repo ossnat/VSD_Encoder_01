@@ -102,6 +102,80 @@ def condition_mean_original_maps(
     return entries
 
 
+def stack_condition_mean_maps(
+    test_df: pd.DataFrame,
+    originals: np.ndarray,
+    reconstructions: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, list[dict[str, object]]]:
+    """
+    Collapse trial stacks to one sample per (date, condition).
+
+    For each condition:
+    - original = mean of trial originals
+    - reconstruction = shared condition prediction (taken from first trial)
+
+    Returns
+    -------
+    cond_originals, cond_reconstructions
+        Arrays with shape (C, H, W), one row per condition (sorted).
+    meta
+        List of {date, condition, n_trials} in the same order.
+    """
+    if originals.shape != reconstructions.shape:
+        raise ValueError(
+            f"Shape mismatch: originals {originals.shape} vs "
+            f"reconstructions {reconstructions.shape}"
+        )
+    if len(test_df) != originals.shape[0]:
+        raise ValueError("test_df row count must match originals trial axis")
+
+    df = test_df.reset_index(drop=True)
+    orig_list: list[np.ndarray] = []
+    recon_list: list[np.ndarray] = []
+    meta: list[dict[str, object]] = []
+    for (date, condition), group in df.groupby(
+        ["date", "condition"], sort=True
+    ):
+        idx = group.index.to_numpy()
+        orig_list.append(np.nanmean(originals[idx], axis=0).astype(np.float32))
+        # Prediction is identical within a condition; first row is fine.
+        recon_list.append(reconstructions[idx[0]].astype(np.float32))
+        meta.append(
+            {
+                "date": str(date),
+                "condition": str(condition),
+                "n_trials": int(len(group)),
+            }
+        )
+    return np.stack(orig_list, axis=0), np.stack(recon_list, axis=0), meta
+
+
+def pixel_correlation_across_conditions(
+    cond_originals: np.ndarray,
+    cond_reconstructions: np.ndarray,
+) -> np.ndarray:
+    """
+    Pearson r at each pixel across the condition axis.
+
+    Same math as ``pixel_correlation_across_trials``, but the first axis
+    should be conditions (typically condition-mean originals vs one recon
+    each). With C conditions this uses C equal-weighted samples.
+    """
+    return pixel_correlation_across_trials(cond_originals, cond_reconstructions)
+
+
+def pixel_r2_across_conditions(
+    cond_originals: np.ndarray,
+    cond_reconstructions: np.ndarray,
+) -> np.ndarray:
+    """
+    R² at each pixel across the condition axis.
+
+    Same math as ``pixel_r2_across_trials`` on condition-collapsed stacks.
+    """
+    return pixel_r2_across_trials(cond_originals, cond_reconstructions)
+
+
 def load_trial_mean_maps(
     test_df: pd.DataFrame,
     *,

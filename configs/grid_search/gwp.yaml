@@ -1,7 +1,7 @@
 # Grid search for Gabor GWP hyperparameters (stage 06)
 
 base_model: configs/models/gabor_serre.yaml
-objective: r_mean_val
+objective: r_mean_val_masked
 
 output_root: Data/VSD_Encoder_01/grid_search/gwp
 

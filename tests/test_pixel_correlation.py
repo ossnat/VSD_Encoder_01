@@ -56,3 +56,42 @@ def test_pixel_correlation_shape_mismatch_raises():
             np.zeros((2, 3, 3), dtype=np.float32),
             np.zeros((3, 3, 3), dtype=np.float32),
         )
+
+
+def test_stack_condition_mean_maps_and_across_conditions_r():
+    import pandas as pd
+
+    from src.evaluation.pixel_correlation import (
+        pixel_correlation_across_conditions,
+        pixel_r2_across_conditions,
+        stack_condition_mean_maps,
+    )
+
+    # Two conditions, 3 trials each; recon constant within condition.
+    h, w = 4, 4
+    originals = np.zeros((6, h, w), dtype=np.float32)
+    recons = np.zeros((6, h, w), dtype=np.float32)
+    # cond A: originals around 1, recon = 1
+    originals[:3] = 1.0 + 0.1 * np.random.randn(3, h, w).astype(np.float32)
+    recons[:3] = 1.0
+    # cond B: originals around 2, recon = 2
+    originals[3:] = 2.0 + 0.1 * np.random.randn(3, h, w).astype(np.float32)
+    recons[3:] = 2.0
+
+    df = pd.DataFrame(
+        {
+            "date": ["d1"] * 3 + ["d2"] * 3,
+            "condition": ["A"] * 3 + ["B"] * 3,
+        }
+    )
+    cond_o, cond_r, meta = stack_condition_mean_maps(df, originals, recons)
+    assert cond_o.shape == (2, h, w)
+    assert len(meta) == 2
+    assert meta[0]["n_trials"] == 3
+
+    corr = pixel_correlation_across_conditions(cond_o, cond_r)
+    # Across 2 conditions, mean originals ~1 vs ~2 and recon 1 vs 2 → r ≈ 1
+    assert np.nanmean(corr) == pytest.approx(1.0, abs=1e-5)
+
+    r2 = pixel_r2_across_conditions(cond_o, cond_r)
+    assert np.nanmean(r2) == pytest.approx(1.0, abs=5e-2)

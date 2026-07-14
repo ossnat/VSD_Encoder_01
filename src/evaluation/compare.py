@@ -69,8 +69,13 @@ def collect_backbone_metrics(
         )
         feature_shape = _feature_shape_from_stimulus_config(stim_cfg_path)
 
+        try:
+            model_config = str(model_path.relative_to(repo))
+        except ValueError:
+            model_config = str(model_path)
+
         row: dict[str, Any] = {
-            "model_config": str(model_path.relative_to(repo)),
+            "model_config": model_config,
             "model_slug": slug,
             "feature_layer": feature_layer,
             "model_type": model_cfg.get("type", "resnet"),

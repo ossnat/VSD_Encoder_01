@@ -49,9 +49,16 @@ When enabled:
 | Metric | Description |
 |--------|-------------|
 | `r_mean_{split}_masked` | Trial-wise Pearson r over in-disk pixels only (stage 03) |
-| `mean_r_masked`, `mean_r2_masked` | Pixel-wise r/R² averaged over the disk (stage 04) |
+| `mean_r_masked`, `mean_r2_masked` | Pixel-wise r/R² **across trials**, then averaged over the disk (stage 04) |
+| `mean_r_across_conditions_masked`, `mean_r2_across_conditions_masked` | Pixel-wise r/R² **across conditions** after averaging originals per condition (equal weight per shape; see interim report) |
 
 Unmasked metrics (`r_mean_{split}`, `mean_r`) are still written for comparison. Geometry matches `VSD_foundation_model` `mae_system.MaskedReconstructionLoss` (center at H/2, W/2).
+
+Regenerate comparison figures:
+
+```bash
+./scripts/py scripts/08_interim_report.py
+```
 
 ## Training unit
 

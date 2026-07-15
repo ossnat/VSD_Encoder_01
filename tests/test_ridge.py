@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from sklearn.linear_model import Ridge
 
-from src.encoding.ridge import RidgeEncodeResult, bias_map, pearson_r
-from src.encoding.ridge_plotting import select_one_trial_per_condition
+from src.encoding.ridge import RidgeEncodeResult, alpha_map, bias_map, pearson_r
+from src.encoding.ridge_plotting import plot_alpha_map, select_one_trial_per_condition
 
 
 def test_pearson_r_perfect():
@@ -29,6 +29,60 @@ def test_bias_map_shape():
     )
     bias = bias_map(result, (10, 10))
     assert bias.shape == (10, 10)
+
+
+def test_fit_ridge_encoder_alpha_per_target(tmp_path):
+    from src.encoding.ridge import alpha_metrics, fit_ridge_encoder
+
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(40, 12))
+    y = rng.normal(size=(40, 8))
+    result = fit_ridge_encoder(
+        x,
+        y,
+        alphas=np.asarray([0.1, 1.0, 10.0]),
+        cv_folds=5,
+        standardize_features=True,
+        alpha_per_target=True,
+    )
+    assert result.alpha_per_target is True
+    assert np.asarray(result.alpha).shape == (8,)
+    summary = alpha_metrics(result.alpha, alpha_per_target=True)
+    assert summary["alpha_per_target"] is True
+    assert "alpha_mean" in summary
+
+    spatial = (2, 4)
+    result.spatial_size = spatial
+    amap = alpha_map(result, spatial)
+    assert amap.shape == spatial
+    underlay = rng.normal(size=spatial).astype(np.float32)
+    out = plot_alpha_map(
+        amap,
+        tmp_path / "alpha.png",
+        title="alpha test",
+        underlay=underlay,
+    )
+    assert out.exists()
+
+
+def test_fit_ridge_encoder_shared_alpha():
+    from src.encoding.ridge import alpha_metrics, fit_ridge_encoder
+
+    rng = np.random.default_rng(1)
+    x = rng.normal(size=(40, 12))
+    y = rng.normal(size=(40, 8))
+    result = fit_ridge_encoder(
+        x,
+        y,
+        alphas=np.asarray([0.1, 1.0, 10.0]),
+        cv_folds=5,
+        standardize_features=True,
+        alpha_per_target=False,
+    )
+    assert result.alpha_per_target is False
+    assert isinstance(result.alpha, float)
+    summary = alpha_metrics(result.alpha, alpha_per_target=False)
+    assert summary["alpha"] == result.alpha
 
 
 def test_select_one_trial_per_condition_prefers_test():

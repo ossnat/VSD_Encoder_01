@@ -10,20 +10,20 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
-import yaml
 
 from src.DL_features.schema import model_slug
 from src.encoding.ridge import attach_feature_paths
 from src.encoding.schema import encoding_pairs_manifest_path, ridge_output_dir
 from src.evaluation.compare import collect_backbone_metrics, comparison_output_dir
-from src.evaluation.mask import mask_from_eval_cfg, masked_pearson_r
+from src.evaluation.mask import apply_mask_nan, mask_from_eval_cfg, masked_map_summary
 from src.evaluation.pixel_correlation import (
+    build_condition_entries,
     load_reconstructed_maps,
     load_trial_mean_maps,
     pixel_correlation_across_conditions,
     pixel_correlation_across_trials,
     pixel_r2_across_conditions,
-    stack_condition_mean_maps,
+    stack_from_condition_entries,
 )
 from src.evaluation.plotting import (
     plot_backbone_correlation_comparison,
@@ -33,71 +33,70 @@ from src.evaluation.plotting import (
     plot_pixel_r2_heatmap,
     plot_test_conditions_grid,
 )
-from src.evaluation.mask import apply_mask_nan, masked_map_summary
+from src.evaluation.report_helpers import (
+    condition_balanced_spatial_r,
+    format_metrics_table,
+    load_yaml,
+    merge_default_window_ridge,
+    model_display_label,
+)
 from src.paths import project_root, resolve_data_path
 
 GWP_BEST = (
     "../Data/VSD_Encoder_01/grid_search/gwp/gandalf/win_0032_0042/best_model.yaml"
 )
 
+TABLE_COLUMNS = {
+    "label": "Model",
+    "r_mean_test_masked": "Trial r (test, masked)",
+    "eval_mean_r_masked": "Mean pixel r across trials (masked)",
+    "eval_mean_r2_masked": "Mean pixel R² across trials (masked)",
+    "mean_r_across_conditions_masked": "Mean pixel r across conditions (masked)",
+    "mean_r2_across_conditions_masked": "Mean pixel R² across conditions (masked)",
+    "spatial_r_cond_mean_masked": "Spatial r (condition-mean, balanced)",
+}
 
-def _comparison_table(df: pd.DataFrame) -> pd.DataFrame:
-    display = df.copy()
-    if "label" not in display.columns:
-        display["label"] = display["model_slug"].map(
-            lambda s: "ResNet18" if "resnet18" in s else "GWP (best, γ=0.3)"
+
+def _load_model_result(
+    *,
+    cfg: dict,
+    model_cfg: dict,
+    pairs: pd.DataFrame,
+    repo: Path,
+    window_id: str,
+    spatial_size: tuple[int, int],
+    split: str,
+):
+    slug = model_slug(model_cfg)
+    feature_layer = str(model_cfg.get("feature_layer", "layer3"))
+    features_root = resolve_data_path(cfg["paths"]["dl_features_stimuli_root"], repo)
+    pairs_feat = attach_feature_paths(
+        pairs,
+        features_root=features_root,
+        monkey=cfg["monkey"],
+        model_slug=slug,
+        feature_layer=feature_layer,
+        repo=repo,
+    )
+    model_split = pairs_feat[pairs_feat["split"] == split].copy().reset_index(drop=True)
+    result = joblib.load(
+        ridge_output_dir(
+            resolve_data_path(cfg["paths"]["ridge_encode_root"], repo),
+            cfg["monkey"],
+            window_id,
+            slug,
+            feature_layer,
         )
-    cols = {
-        "label": "Model",
-        "r_mean_test_masked": "Trial r (test, masked)",
-        "eval_mean_r_masked": "Mean pixel r across trials (masked)",
-        "eval_mean_r2_masked": "Mean pixel R² across trials (masked)",
-        "mean_r_across_conditions_masked": "Mean pixel r across conditions (masked)",
-        "mean_r2_across_conditions_masked": "Mean pixel R² across conditions (masked)",
-    }
-    use = {k: v for k, v in cols.items() if k in display.columns}
-    out = display[list(use.keys())].rename(columns=use)
-    for col in out.columns[1:]:
-        out[col] = out[col].map(lambda x: f"{x:.4f}" if pd.notna(x) else "—")
-    return out
-
-
-def _load_yaml(path: Path) -> dict:
-    with path.open() as f:
-        return yaml.safe_load(f)
-
-
-def _merge_config(default_path: Path, window_path: Path, ridge_path: Path) -> dict:
-    cfg = _load_yaml(default_path)
-    cfg.update(_load_yaml(window_path))
-    cfg["ridge"] = _load_yaml(ridge_path)
-    return cfg
-
-
-def _model_label(model_cfg: dict, slug: str) -> str:
-    if "resnet18" in slug:
-        return "ResNet18"
-    gamma = model_cfg.get("gwp", {}).get("gamma")
-    return f"GWP (best, γ={gamma})" if gamma is not None else "GWP (best)"
-
-
-def _condition_balanced_spatial_r(
-    conditions: list[dict[str, object]],
-    mask: np.ndarray,
-) -> float:
-    """Equal-weight mean of masked spatial r(mean orig, recon) per condition."""
-    rs = [
-        masked_pearson_r(
-            np.asarray(c["original"]),
-            np.asarray(c["reconstruction"]),
-            mask,
-        )
-        for c in conditions
-    ]
-    finite = [r for r in rs if np.isfinite(r)]
-    if not finite:
-        return float("nan")
-    return float(np.mean(finite))
+        / "model.joblib"
+    )["result"]
+    result.spatial_size = spatial_size
+    recon_all = load_reconstructed_maps(
+        model_split,
+        result=result,
+        repo=repo,
+        spatial_size=spatial_size,
+    )
+    return slug, feature_layer, model_split, recon_all
 
 
 def render_interim_report(
@@ -141,14 +140,7 @@ def render_interim_report(
         end_frame=int(cfg["end_frame"]),
         avg_method=cfg.get("avg_method", "mean"),
     )
-
-    group_indices: list[np.ndarray] = []
-    per_cond_trial_r: list[dict[str, object]] = []
-    corr_panels: list[tuple[str, np.ndarray]] = []
-    corr_across_cond_panels: list[tuple[str, np.ndarray]] = []
-    r2_across_cond_panels: list[tuple[str, np.ndarray]] = []
-    balanced_rows: list[dict[str, str]] = []
-    across_cond_rows: list[dict[str, str]] = []
+    mean_original = np.nanmean(originals_all, axis=0).astype(np.float32)
 
     metrics_df = collect_backbone_metrics(
         repo=repo,
@@ -157,150 +149,89 @@ def render_interim_report(
         model_cfg_paths=model_cfg_paths,
         split=split,
     )
-    metrics_df["label"] = [
-        _model_label(_load_yaml(p), model_slug(_load_yaml(p)))
-        for p in model_cfg_paths
-    ]
+
+    per_cond_trial_r: list[dict[str, object]] = []
+    corr_panels: list[tuple[str, np.ndarray]] = []
+    corr_across_cond_panels: list[tuple[str, np.ndarray]] = []
+    r2_across_cond_panels: list[tuple[str, np.ndarray]] = []
 
     for model_path in model_cfg_paths:
-        model_cfg = _load_yaml(model_path)
-        slug = model_slug(model_cfg)
-        feature_layer = str(model_cfg.get("feature_layer", "layer3"))
-        label = _model_label(model_cfg, slug)
-
-        features_root = resolve_data_path(cfg["paths"]["dl_features_stimuli_root"], repo)
-        pairs_feat = attach_feature_paths(
-            pairs,
-            features_root=features_root,
-            monkey=cfg["monkey"],
-            model_slug=slug,
-            feature_layer=feature_layer,
+        model_cfg = load_yaml(model_path)
+        slug, _feature_layer, model_split, recon_all = _load_model_result(
+            cfg=cfg,
+            model_cfg=model_cfg,
+            pairs=pairs,
             repo=repo,
-        )
-        model_split = pairs_feat[pairs_feat["split"] == split].copy().reset_index(drop=True)
-
-        result = joblib.load(
-            ridge_output_dir(
-                resolve_data_path(cfg["paths"]["ridge_encode_root"], repo),
-                cfg["monkey"],
-                window_id,
-                slug,
-                feature_layer,
-            )
-            / "model.joblib"
-        )["result"]
-        result.spatial_size = spatial_size
-
-        recon_all = load_reconstructed_maps(
-            model_split,
-            result=result,
-            repo=repo,
+            window_id=window_id,
             spatial_size=spatial_size,
+            split=split,
         )
+        label = model_display_label(model_cfg, slug)
+        row_idx = metrics_df["model_slug"] == slug
+        metrics_df.loc[row_idx, "label"] = label
 
-        if not group_indices:
-            for (_, _), grp in model_split.groupby(["date", "condition"], sort=True):
-                group_indices.append(grp.index.to_numpy())
-
-        conditions: list[dict[str, object]] = []
-        for (date, condition), grp in model_split.groupby(["date", "condition"], sort=True):
-            idx = grp.index.to_numpy()
-            mean_orig = np.nanmean(originals_all[idx], axis=0).astype(np.float32)
-            recon = recon_all[idx[0]]
-            trial_rs = [
-                masked_pearson_r(originals_all[i], recon_all[i], eval_mask)
-                for i in idx
-            ]
-            mean_trial_r = float(np.nanmean(trial_rs))
-            conditions.append(
-                {
-                    "date": str(date),
-                    "condition": str(condition),
-                    "n_trials": int(len(grp)),
-                    "original": mean_orig,
-                    "reconstruction": recon,
-                    "trial_r_masked": mean_trial_r,
-                }
-            )
+        conditions = build_condition_entries(
+            model_split,
+            originals_all,
+            recon_all,
+            eval_mask=eval_mask,
+        )
+        for c in conditions:
             per_cond_trial_r.append(
                 {
                     "model_label": label,
                     "model_slug": slug,
-                    "date": str(date),
-                    "condition": str(condition),
-                    "n_trials": int(len(grp)),
-                    "trial_r_masked": mean_trial_r,
+                    "date": c["date"],
+                    "condition": c["condition"],
+                    "n_trials": c["n_trials"],
+                    "trial_r_masked": c["trial_r_masked"],
                 }
             )
 
-        balanced_r = _condition_balanced_spatial_r(conditions, eval_mask)
-        row_idx = metrics_df["model_slug"] == slug
-        metrics_df.loc[row_idx, "spatial_r_cond_mean_masked"] = balanced_r
-        balanced_rows.append(
-            {
-                "Model": label,
-                "Spatial r (condition-mean, balanced)": f"{balanced_r:.4f}"
-                if np.isfinite(balanced_r)
-                else "—",
-            }
+        metrics_df.loc[row_idx, "spatial_r_cond_mean_masked"] = (
+            condition_balanced_spatial_r(conditions, eval_mask)
         )
 
-        cond_orig, cond_recon, cond_meta = stack_condition_mean_maps(
-            model_split, originals_all, recon_all
-        )
+        cond_orig, cond_recon, cond_meta = stack_from_condition_entries(conditions)
         corr_across = pixel_correlation_across_conditions(cond_orig, cond_recon)
         r2_across = pixel_r2_across_conditions(cond_orig, cond_recon)
         mean_r_ac = masked_map_summary(corr_across, eval_mask)["mean"]
         mean_r2_ac = masked_map_summary(r2_across, eval_mask)["mean"]
         metrics_df.loc[row_idx, "mean_r_across_conditions_masked"] = mean_r_ac
         metrics_df.loc[row_idx, "mean_r2_across_conditions_masked"] = mean_r2_ac
-        across_cond_rows.append(
-            {
-                "Model": label,
-                "Mean pixel r across conditions (masked)": (
-                    f"{mean_r_ac:.4f}" if np.isfinite(mean_r_ac) else "—"
-                ),
-                "Mean pixel R² across conditions (masked)": (
-                    f"{mean_r2_ac:.4f}" if np.isfinite(mean_r2_ac) else "—"
-                ),
-            }
-        )
-        corr_across_cond_panels.append(
-            (f"{label}\nmean r = {mean_r_ac:.3f}", apply_mask_nan(corr_across, eval_mask))
-        )
-        r2_across_cond_panels.append(
-            (f"{label}\nmean R² = {mean_r2_ac:.3f}", apply_mask_nan(r2_across, eval_mask))
-        )
 
-        corr_map = pixel_correlation_across_trials(originals_all, recon_all)
-        corr_map = apply_mask_nan(corr_map, eval_mask)
+        corr_across_m = apply_mask_nan(corr_across, eval_mask)
+        r2_across_m = apply_mask_nan(r2_across, eval_mask)
+        corr_across_cond_panels.append((f"{label}\nmean r = {mean_r_ac:.3f}", corr_across_m))
+        r2_across_cond_panels.append((f"{label}\nmean R² = {mean_r2_ac:.3f}", r2_across_m))
+
+        corr_map = apply_mask_nan(
+            pixel_correlation_across_trials(originals_all, recon_all),
+            eval_mask,
+        )
         mr = float(metrics_df.loc[row_idx, "eval_mean_r_masked"].iloc[0])
         corr_panels.append((f"{label}\nmean r = {mr:.3f}", corr_map))
 
-        grid_path = out_dir / f"{slug}_{split}_conditions_masked.png"
         plot_test_conditions_grid(
             conditions,
-            grid_path,
+            out_dir / f"{slug}_{split}_conditions_masked.png",
             mask=eval_mask,
             spatial_size=spatial_size,
             mask_radius=mask_radius,
             model_label=label,
             split=split,
         )
-
-        # Per-model heatmaps for across-conditions metrics
-        mean_orig_underlay = np.nanmean(originals_all, axis=0).astype(np.float32)
         plot_pixel_correlation_heatmap(
-            apply_mask_nan(corr_across, eval_mask),
+            corr_across_m,
             out_dir / f"{slug}_{split}_pixel_r_across_conditions.png",
             title=(
                 f"{label} | pixel r across conditions ({split}) | "
                 f"C={len(cond_meta)} | mean r={mean_r_ac:.3f} | mask r={mask_radius}"
             ),
-            underlay=mean_orig_underlay,
+            underlay=mean_original,
         )
         plot_pixel_r2_heatmap(
-            apply_mask_nan(r2_across, eval_mask),
+            r2_across_m,
             out_dir / f"{slug}_{split}_pixel_r2_across_conditions.png",
             title=(
                 f"{label} | pixel R² across conditions ({split}) | "
@@ -308,9 +239,7 @@ def render_interim_report(
             ),
         )
 
-    table = _comparison_table(metrics_df)
-    balanced_df = pd.DataFrame(balanced_rows)
-    table = table.merge(balanced_df, on="Model", how="left")
+    table = format_metrics_table(metrics_df, columns=TABLE_COLUMNS)
     table_path = out_dir / f"comparison_table_{split}.csv"
     table.to_csv(table_path, index=False)
 
@@ -327,8 +256,6 @@ def render_interim_report(
         cond_bar_path,
         title=f"Mean trial r per test condition (masked r={mask_radius})",
     )
-
-    mean_original = np.nanmean(originals_all, axis=0).astype(np.float32)
 
     heatmap_path = out_dir / f"pixel_correlation_side_by_side_{split}.png"
     plot_backbone_correlation_comparison(
@@ -367,9 +294,7 @@ def render_interim_report(
         "window_id": window_id,
         "split": split,
         "mask_radius": mask_radius,
-        "n_conditions": int(
-            split_df.groupby(["date", "condition"]).ngroups
-        ),
+        "n_conditions": int(split_df.groupby(["date", "condition"]).ngroups),
         "table": table.to_dict(orient="records"),
         "per_condition_trial_r": per_cond_trial_r,
         "outputs": {
@@ -412,13 +337,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=project_root() / "configs/ridge/default.yaml",
     )
-    parser.add_argument(
-        "--model",
-        type=Path,
-        action="append",
-        dest="models",
-        default=None,
-    )
+    parser.add_argument("--model", type=Path, action="append", dest="models", default=None)
     parser.add_argument("--split", type=str, default="test")
     parser.add_argument("--output-dir", type=Path, default=None)
     return parser.parse_args(argv)
@@ -427,7 +346,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     repo = project_root()
-    cfg = _merge_config(args.config, args.window, args.ridge_config)
+    cfg = merge_default_window_ridge(args.config, args.window, args.ridge_config)
 
     if args.models:
         model_paths = [p if p.is_absolute() else repo / p for p in args.models]

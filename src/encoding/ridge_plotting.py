@@ -59,6 +59,46 @@ def plot_bias_map(
     return output_path
 
 
+def plot_alpha_map(
+    alpha: np.ndarray,
+    output_path: Path,
+    *,
+    title: str = "RidgeCV alpha (per pixel)",
+    underlay: np.ndarray | None = None,
+    underlay_alpha: float = 0.45,
+) -> Path:
+    """Heatmap of per-pixel RidgeCV α, optionally over a gray VSD underlay."""
+    from matplotlib.colors import LogNorm
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    finite = alpha[np.isfinite(alpha) & (alpha > 0)]
+    if finite.size == 0:
+        raise ValueError("alpha map has no positive finite values")
+    vmin = float(finite.min())
+    vmax = float(finite.max())
+    if vmin == vmax:
+        vmax = vmin * 10.0 if vmin > 0 else 1.0
+
+    fig, ax = plt.subplots(figsize=(4.5, 4))
+    if underlay is not None:
+        u_lo, u_hi = _shared_limits([underlay])
+        ax.imshow(underlay, cmap="gray", vmin=u_lo, vmax=u_hi, alpha=underlay_alpha)
+    im = ax.imshow(
+        alpha,
+        cmap="magma",
+        norm=LogNorm(vmin=vmin, vmax=vmax),
+        alpha=0.85 if underlay is not None else 1.0,
+    )
+    ax.set_title(title, fontsize=10)
+    ax.axis("off")
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label("α", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
 def plot_reconstruction_pair(
     meta: dict,
     original: np.ndarray,

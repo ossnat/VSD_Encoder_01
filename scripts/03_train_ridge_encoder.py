@@ -21,15 +21,18 @@ from src.encoding.vsd_stimulus_plotting import (
     plot_vsd_vs_stimulus_pair,
 )
 from src.encoding.ridge import (
+    alpha_map,
     attach_feature_paths,
+    alpha_metrics,
     bias_map,
     build_xy,
     fit_ridge_encoder,
     pearson_r,
     predict_maps,
 )
-from src.evaluation.mask import mask_from_eval_cfg, masked_pearson_r
+from src.evaluation.mask import apply_mask_nan, mask_from_eval_cfg, masked_pearson_r
 from src.encoding.ridge_plotting import (
+    plot_alpha_map,
     plot_bias_map,
     plot_reconstructed_only_grid,
     plot_reconstruction_grid,
@@ -100,7 +103,6 @@ def train_ridge_encoder(
     eval_mask = mask_from_eval_cfg(eval_cfg, spatial_size)
 
     model_cfg = _load_yaml(model_cfg_path)
-    backbone_name = model_cfg["name"]
     feature_layer = model_cfg.get("feature_layer", "layer3")
     model_name = model_slug(model_cfg)
 
@@ -134,12 +136,14 @@ def train_ridge_encoder(
 
     x_train, y_train = build_xy(train_df, repo=repo, spatial_size=spatial_size)
     alphas = np.asarray(ridge_cfg["alphas"], dtype=np.float64)
+    alpha_per_target = bool(ridge_cfg.get("alpha_per_target", True))
     result = fit_ridge_encoder(
         x_train,
         y_train,
         alphas=alphas,
         cv_folds=int(ridge_cfg.get("cv_folds", 5)),
         standardize_features=bool(ridge_cfg.get("standardize_features", True)),
+        alpha_per_target=alpha_per_target,
     )
     result.spatial_size = spatial_size
     result.feature_layer = feature_layer
@@ -154,9 +158,14 @@ def train_ridge_encoder(
     )
     out_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump({"result": result}, out_dir / "model.joblib")
+    if alpha_per_target:
+        np.save(
+            out_dir / "alphas_per_target.npy",
+            np.asarray(result.alpha, dtype=np.float64),
+        )
 
     metrics: dict[str, object] = {
-        "alpha": result.alpha,
+        **alpha_metrics(result.alpha, alpha_per_target=alpha_per_target),
         "n_train": int(len(train_df)),
         "n_eval": int(len(eval_df)),
         "feature_layer": feature_layer,
@@ -196,6 +205,22 @@ def train_ridge_encoder(
         plot_dir / "bias.png",
         title=f"RidgeCV intercept | {model_name} {feature_layer}",
     )
+
+    if alpha_per_target:
+        alphas_spatial = alpha_map(result, spatial_size)
+        if eval_mask is not None:
+            alphas_spatial = apply_mask_nan(alphas_spatial, eval_mask)
+        underlay = y_train.reshape(len(train_df), *spatial_size).mean(axis=0)
+        plot_alpha_map(
+            alphas_spatial,
+            plot_dir / "alpha_per_pixel.png",
+            title=(
+                f"RidgeCV α per pixel | {model_name} {feature_layer}\n"
+                f"median={float(np.nanmedian(alphas_spatial)):.3g} | "
+                f"gray = train-mean VSD"
+            ),
+            underlay=underlay,
+        )
 
     plot_by_condition_dir = plot_dir / "by_condition"
     plot_by_condition_dir.mkdir(parents=True, exist_ok=True)
@@ -293,7 +318,7 @@ def train_ridge_encoder(
         "end_frame": end_frame,
         "model_slug": model_name,
         "feature_layer": feature_layer,
-        "alpha": result.alpha,
+        **alpha_metrics(result.alpha, alpha_per_target=alpha_per_target),
         "metrics": metrics,
         "encoding_pairs_manifest": _portable_path(pairs_path, repo),
         "model_path": _portable_path(out_dir / "model.joblib", repo),
@@ -308,7 +333,15 @@ def train_ridge_encoder(
     print(f"Monkey: {monkey}")
     print(f"Window: {window_id}")
     print(f"Model: {model_name} / {feature_layer}")
-    print(f"Selected alpha: {result.alpha}")
+    if alpha_per_target:
+        alphas_arr = np.asarray(result.alpha, dtype=np.float64)
+        print(
+            f"Selected alphas (per target): mean={alphas_arr.mean():.4g} "
+            f"median={np.median(alphas_arr):.4g} "
+            f"[{alphas_arr.min():.4g}, {alphas_arr.max():.4g}]"
+        )
+    else:
+        print(f"Selected alpha: {result.alpha}")
     print(f"Train trials: {len(train_df)} | Eval trials: {len(eval_df)}")
     for split_name, rs in split_scores.items():
         line = f"  r ({split_name}): mean={np.nanmean(rs):.3f} median={np.nanmedian(rs):.3f}"

@@ -18,6 +18,7 @@ from src.DL_features.schema import model_slug, stimulus_feature_dir, stimulus_ma
 from src.encoding.pairs import dedupe_stimulus_manifest
 from src.encoding.ridge import (
     attach_feature_paths,
+    alpha_metrics,
     build_xy,
     fit_ridge_encoder,
     pearson_r,
@@ -165,12 +166,14 @@ def run_gwp_trial(
         raise RuntimeError("No training trials for grid search")
 
     x_train, y_train = build_xy(train_df, repo=repo, spatial_size=spatial_size)
+    alpha_per_target = bool(ridge_cfg.get("alpha_per_target", True))
     result = fit_ridge_encoder(
         x_train,
         y_train,
         alphas=np.asarray(ridge_cfg["alphas"], dtype=np.float64),
         cv_folds=int(ridge_cfg.get("cv_folds", 5)),
         standardize_features=bool(ridge_cfg.get("standardize_features", True)),
+        alpha_per_target=alpha_per_target,
     )
     result.spatial_size = spatial_size
     result.feature_layer = feature_layer
@@ -189,7 +192,7 @@ def run_gwp_trial(
         "model_slug": slug,
         "variant": model_cfg.get("variant"),
         "feature_layer": feature_layer,
-        "alpha": float(result.alpha),
+        **alpha_metrics(result.alpha, alpha_per_target=alpha_per_target),
         "n_train": int(len(train_df)),
         "r_mean_train": _mean_split_r(
             pairs,

@@ -58,7 +58,6 @@ def _plot_summary(df: pd.DataFrame, out_path: Path) -> None:
         for row in df.itertuples(index=False)
     ]
     x = range(len(labels))
-    width = 0.35
 
     fig, axes = plt.subplots(1, 2, figsize=(max(8, len(labels) * 2.5), 4))
 

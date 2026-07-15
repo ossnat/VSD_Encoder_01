@@ -19,10 +19,30 @@ from src.paths import resolve_data_path
 class RidgeEncodeResult:
     model: RidgeCV
     scaler: StandardScaler | None
-    alpha: float
+    alpha: float | np.ndarray
     spatial_size: tuple[int, int]
     feature_layer: str
     model_slug: str
+    alpha_per_target: bool = False
+
+
+def alpha_metrics(alpha: float | np.ndarray, *, alpha_per_target: bool) -> dict[str, object]:
+    """JSON-serializable summary of selected RidgeCV alpha(s)."""
+    if alpha_per_target:
+        arr = np.asarray(alpha, dtype=np.float64).ravel()
+        return {
+            "alpha_per_target": True,
+            "alpha": float(np.mean(arr)),  # backward-compatible scalar summary
+            "alpha_mean": float(np.mean(arr)),
+            "alpha_median": float(np.median(arr)),
+            "alpha_min": float(np.min(arr)),
+            "alpha_max": float(np.max(arr)),
+            "n_alphas": int(arr.size),
+        }
+    return {
+        "alpha_per_target": False,
+        "alpha": float(alpha),
+    }
 
 
 def _flatten_features(feat_map: np.ndarray) -> np.ndarray:
@@ -100,27 +120,52 @@ def fit_ridge_encoder(
     alphas: np.ndarray,
     cv_folds: int,
     standardize_features: bool,
+    alpha_per_target: bool = False,
 ) -> RidgeEncodeResult:
+    """
+    Fit RidgeCV mapping features → multi-pixel VSD targets.
+
+    When ``alpha_per_target`` is True, sklearn requires leave-one-out GCV
+    (``cv=None``); ``cv_folds`` is ignored in that mode.
+    """
     scaler: StandardScaler | None = None
     x_fit = x_train
     if standardize_features:
         scaler = StandardScaler()
         x_fit = scaler.fit_transform(x_train)
 
-    n_splits = min(cv_folds, len(x_fit))
-    if n_splits < 2:
+    if len(x_fit) < 2:
         raise ValueError("Need at least 2 training trials for RidgeCV")
 
-    model = RidgeCV(alphas=alphas, cv=n_splits)
+    if alpha_per_target:
+        # Per-target α is only supported with efficient LOO GCV (cv=None).
+        model = RidgeCV(
+            alphas=alphas,
+            cv=None,
+            alpha_per_target=True,
+        )
+    else:
+        n_splits = min(cv_folds, len(x_fit))
+        if n_splits < 2:
+            raise ValueError("Need at least 2 training trials for RidgeCV")
+        model = RidgeCV(alphas=alphas, cv=n_splits, alpha_per_target=False)
+
     model.fit(x_fit, y_train)
+    selected = np.asarray(model.alpha_, dtype=np.float64)
+    alpha_value: float | np.ndarray
+    if alpha_per_target:
+        alpha_value = selected.astype(np.float64, copy=False)
+    else:
+        alpha_value = float(selected.reshape(-1)[0])
 
     return RidgeEncodeResult(
         model=model,
         scaler=scaler,
-        alpha=float(model.alpha_),
+        alpha=alpha_value,
         spatial_size=(0, 0),  # filled by caller
         feature_layer="",
         model_slug="",
+        alpha_per_target=alpha_per_target,
     )
 
 
@@ -140,6 +185,19 @@ def predict_maps(
 def bias_map(result: RidgeEncodeResult, spatial_size: tuple[int, int]) -> np.ndarray:
     height, width = spatial_size
     return np.asarray(result.model.intercept_, dtype=np.float32).reshape(height, width)
+
+
+def alpha_map(result: RidgeEncodeResult, spatial_size: tuple[int, int]) -> np.ndarray:
+    """Reshape per-target RidgeCV alphas to a spatial map."""
+    if not result.alpha_per_target:
+        raise ValueError("alpha_map requires alpha_per_target=True")
+    height, width = spatial_size
+    arr = np.asarray(result.alpha, dtype=np.float64).ravel()
+    if arr.size != height * width:
+        raise ValueError(
+            f"Expected {height * width} alphas, got {arr.size}"
+        )
+    return arr.reshape(height, width)
 
 
 def pearson_r(y_true: np.ndarray, y_pred: np.ndarray) -> float:

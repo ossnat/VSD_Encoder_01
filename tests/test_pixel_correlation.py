@@ -62,22 +62,24 @@ def test_stack_condition_mean_maps_and_across_conditions_r():
     import pandas as pd
 
     from src.evaluation.pixel_correlation import (
+        build_condition_entries,
         pixel_correlation_across_conditions,
         pixel_r2_across_conditions,
         stack_condition_mean_maps,
+        stack_from_condition_entries,
     )
 
     # Two conditions, 3 trials each; recon constant within condition.
     h, w = 4, 4
+    base = np.linspace(0.5, 1.5, h * w, dtype=np.float32).reshape(h, w)
     originals = np.zeros((6, h, w), dtype=np.float32)
     recons = np.zeros((6, h, w), dtype=np.float32)
-    # cond A: originals around 1, recon = 1
-    originals[:3] = 1.0 + 0.1 * np.random.randn(3, h, w).astype(np.float32)
-    recons[:3] = 1.0
-    # cond B: originals around 2, recon = 2
-    originals[3:] = 2.0 + 0.1 * np.random.randn(3, h, w).astype(np.float32)
-    recons[3:] = 2.0
+    originals[:3] = base + 0.05 * np.random.randn(3, h, w).astype(np.float32)
+    recons[:3] = base
+    originals[3:] = 2.0 * base + 0.05 * np.random.randn(3, h, w).astype(np.float32)
+    recons[3:] = 2.0 * base
 
+    # Condition means ≈ base / 2*base vs recons base / 2*base → r ≈ 1, R² ≈ 1.
     df = pd.DataFrame(
         {
             "date": ["d1"] * 3 + ["d2"] * 3,
@@ -89,8 +91,12 @@ def test_stack_condition_mean_maps_and_across_conditions_r():
     assert len(meta) == 2
     assert meta[0]["n_trials"] == 3
 
+    entries = build_condition_entries(df, originals, recons)
+    cond_o2, cond_r2, _ = stack_from_condition_entries(entries)
+    assert np.allclose(cond_o, cond_o2)
+    assert np.allclose(cond_r, cond_r2)
+
     corr = pixel_correlation_across_conditions(cond_o, cond_r)
-    # Across 2 conditions, mean originals ~1 vs ~2 and recon 1 vs 2 → r ≈ 1
     assert np.nanmean(corr) == pytest.approx(1.0, abs=1e-5)
 
     r2 = pixel_r2_across_conditions(cond_o, cond_r)

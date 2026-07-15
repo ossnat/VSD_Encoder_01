@@ -3,6 +3,10 @@
 # L2 regularization strengths scanned by RidgeCV on train split.
 alphas: [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]
 
+# When true, select a separate alpha per VSD pixel (sklearn alpha_per_target).
+# Requires leave-one-out GCV (cv=None); cv_folds is ignored in that mode.
+alpha_per_target: true
+
 cv_folds: 5
 standardize_features: true
 plot_one_per_condition: true

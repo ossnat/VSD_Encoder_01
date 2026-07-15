@@ -168,59 +168,6 @@ def plot_masked_map_panel(
     ax.axis("off")
 
 
-def plot_masked_condition_triptych(
-    original: np.ndarray,
-    reconstruction: np.ndarray,
-    output_path: Path,
-    *,
-    mask: np.ndarray,
-    spatial_size: tuple[int, int],
-    mask_radius: int,
-    title: str,
-    trial_r_masked: float | None = None,
-) -> Path:
-    """Original | reconstruction | diff with circular evaluation mask."""
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    diff = (reconstruction - original).astype(np.float32)
-
-    vmin, vmax = _shared_limits(
-        [apply_mask_nan(original, mask), apply_mask_nan(reconstruction, mask)]
-    )
-    diff_lim = float(
-        np.nanpercentile(np.abs(apply_mask_nan(diff, mask)), 99)
-    )
-    diff_lim = diff_lim if diff_lim > 1e-8 else 1.0
-
-    subtitle = title
-    if trial_r_masked is not None and np.isfinite(trial_r_masked):
-        subtitle += f"\ntrial r (masked) = {trial_r_masked:.3f}"
-
-    fig, axes = plt.subplots(1, 3, figsize=(10.5, 3.6))
-    panels = [
-        (original, "Condition-mean original", "viridis", vmin, vmax),
-        (reconstruction, "Reconstruction", "viridis", vmin, vmax),
-        (diff, "Recon − original", "RdBu_r", -diff_lim, diff_lim),
-    ]
-    for ax, (img, panel_title, cmap, lo, hi) in zip(axes, panels):
-        plot_masked_map_panel(
-            ax,
-            img,
-            mask,
-            spatial_size=spatial_size,
-            mask_radius=mask_radius,
-            title=panel_title,
-            cmap=cmap,
-            vmin=lo,
-            vmax=hi,
-        )
-
-    fig.suptitle(subtitle, fontsize=10)
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    return output_path
-
-
 def plot_test_conditions_grid(
     conditions: list[dict[str, object]],
     output_path: Path,

@@ -67,7 +67,6 @@ def evaluate_pixel_correlation_run(
     mask_radius = int(eval_cfg["mask_radius"]) if eval_mask is not None else None
 
     model_cfg = _load_yaml(model_cfg_path)
-    backbone_name = model_cfg["name"]
     feature_layer = model_cfg.get("feature_layer", "layer3")
     model_name = model_slug(model_cfg)
 

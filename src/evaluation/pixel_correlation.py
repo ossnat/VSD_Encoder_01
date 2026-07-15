@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 
 from src.data.trial_frames import load_h5_mean_frame
-from src.encoding.ridge import RidgeEncodeResult, build_xy, predict_maps
-from src.evaluation.mask import apply_mask_nan, masked_map_summary
+from src.encoding.ridge import RidgeEncodeResult, build_xy, pearson_r, predict_maps
+from src.evaluation.mask import apply_mask_nan, masked_map_summary, masked_pearson_r
 
 
 def pixel_correlation_across_trials(
@@ -77,6 +77,19 @@ def pixel_r2_across_trials(
     return r2.astype(np.float32)
 
 
+def _iter_condition_indices(
+    test_df: pd.DataFrame,
+) -> list[tuple[str, str, np.ndarray]]:
+    """Return sorted (date, condition, trial_indices) groups."""
+    df = test_df.reset_index(drop=True)
+    groups: list[tuple[str, str, np.ndarray]] = []
+    for (date, condition), group in df.groupby(
+        ["date", "condition"], sort=True
+    ):
+        groups.append((str(date), str(condition), group.index.to_numpy()))
+    return groups
+
+
 def condition_mean_original_maps(
     test_df: pd.DataFrame,
     originals: np.ndarray,
@@ -85,17 +98,13 @@ def condition_mean_original_maps(
     if len(test_df) != originals.shape[0]:
         raise ValueError("test_df row count must match originals trial axis")
 
-    df = test_df.reset_index(drop=True)
     entries: list[dict[str, object]] = []
-    for (date, condition), group in df.groupby(
-        ["date", "condition"], sort=True
-    ):
-        idx = group.index.to_numpy()
+    for date, condition, idx in _iter_condition_indices(test_df):
         entries.append(
             {
-                "date": str(date),
-                "condition": str(condition),
-                "n_trials": int(len(group)),
+                "date": date,
+                "condition": condition,
+                "n_trials": int(len(idx)),
                 "map": np.nanmean(originals[idx], axis=0).astype(np.float32),
             }
         )
@@ -112,14 +121,9 @@ def stack_condition_mean_maps(
 
     For each condition:
     - original = mean of trial originals
-    - reconstruction = shared condition prediction (taken from first trial)
+    - reconstruction = shared condition prediction (first trial row)
 
-    Returns
-    -------
-    cond_originals, cond_reconstructions
-        Arrays with shape (C, H, W), one row per condition (sorted).
-    meta
-        List of {date, condition, n_trials} in the same order.
+    Returns (cond_originals, cond_reconstructions, meta) with shapes (C, H, W).
     """
     if originals.shape != reconstructions.shape:
         raise ValueError(
@@ -129,38 +133,88 @@ def stack_condition_mean_maps(
     if len(test_df) != originals.shape[0]:
         raise ValueError("test_df row count must match originals trial axis")
 
-    df = test_df.reset_index(drop=True)
     orig_list: list[np.ndarray] = []
     recon_list: list[np.ndarray] = []
     meta: list[dict[str, object]] = []
-    for (date, condition), group in df.groupby(
-        ["date", "condition"], sort=True
-    ):
-        idx = group.index.to_numpy()
+    for date, condition, idx in _iter_condition_indices(test_df):
         orig_list.append(np.nanmean(originals[idx], axis=0).astype(np.float32))
-        # Prediction is identical within a condition; first row is fine.
         recon_list.append(reconstructions[idx[0]].astype(np.float32))
         meta.append(
-            {
-                "date": str(date),
-                "condition": str(condition),
-                "n_trials": int(len(group)),
-            }
+            {"date": date, "condition": condition, "n_trials": int(len(idx))}
         )
     return np.stack(orig_list, axis=0), np.stack(recon_list, axis=0), meta
+
+
+def build_condition_entries(
+    test_df: pd.DataFrame,
+    originals: np.ndarray,
+    reconstructions: np.ndarray,
+    *,
+    eval_mask: np.ndarray | None = None,
+) -> list[dict[str, object]]:
+    """Per-condition dicts for plotting: mean original, recon, mean trial r."""
+    if originals.shape != reconstructions.shape:
+        raise ValueError(
+            f"Shape mismatch: originals {originals.shape} vs "
+            f"reconstructions {reconstructions.shape}"
+        )
+    if len(test_df) != originals.shape[0]:
+        raise ValueError("test_df row count must match originals trial axis")
+
+    entries: list[dict[str, object]] = []
+    for date, condition, idx in _iter_condition_indices(test_df):
+        mean_orig = np.nanmean(originals[idx], axis=0).astype(np.float32)
+        recon = reconstructions[idx[0]].astype(np.float32)
+        if eval_mask is not None:
+            trial_rs = [
+                masked_pearson_r(originals[i], reconstructions[i], eval_mask)
+                for i in idx
+            ]
+        else:
+            trial_rs = [
+                pearson_r(originals[i], reconstructions[i]) for i in idx
+            ]
+        entries.append(
+            {
+                "date": date,
+                "condition": condition,
+                "n_trials": int(len(idx)),
+                "original": mean_orig,
+                "reconstruction": recon,
+                "trial_r_masked": float(np.nanmean(trial_rs)),
+            }
+        )
+    return entries
+
+
+def stack_from_condition_entries(
+    conditions: list[dict[str, object]],
+) -> tuple[np.ndarray, np.ndarray, list[dict[str, object]]]:
+    """Stack original/recon maps from ``build_condition_entries`` output."""
+    cond_originals = np.stack(
+        [np.asarray(c["original"], dtype=np.float32) for c in conditions],
+        axis=0,
+    )
+    cond_reconstructions = np.stack(
+        [np.asarray(c["reconstruction"], dtype=np.float32) for c in conditions],
+        axis=0,
+    )
+    meta = [
+        {
+            "date": c["date"],
+            "condition": c["condition"],
+            "n_trials": c["n_trials"],
+        }
+        for c in conditions
+    ]
+    return cond_originals, cond_reconstructions, meta
 
 
 def pixel_correlation_across_conditions(
     cond_originals: np.ndarray,
     cond_reconstructions: np.ndarray,
 ) -> np.ndarray:
-    """
-    Pearson r at each pixel across the condition axis.
-
-    Same math as ``pixel_correlation_across_trials``, but the first axis
-    should be conditions (typically condition-mean originals vs one recon
-    each). With C conditions this uses C equal-weighted samples.
-    """
+    """Pearson r at each pixel across conditions (equal weight per shape)."""
     return pixel_correlation_across_trials(cond_originals, cond_reconstructions)
 
 
@@ -168,11 +222,7 @@ def pixel_r2_across_conditions(
     cond_originals: np.ndarray,
     cond_reconstructions: np.ndarray,
 ) -> np.ndarray:
-    """
-    R² at each pixel across the condition axis.
-
-    Same math as ``pixel_r2_across_trials`` on condition-collapsed stacks.
-    """
+    """R² at each pixel across conditions (equal weight per shape)."""
     return pixel_r2_across_trials(cond_originals, cond_reconstructions)
 
 
@@ -225,11 +275,22 @@ def evaluate_pixel_correlation(
     avg_method: str,
     mask: np.ndarray | None = None,
     mask_radius: int | None = None,
-) -> tuple[np.ndarray, np.ndarray, list[dict[str, object]], dict[str, float | int]]:
+) -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    list[dict[str, object]],
+    dict[str, float | int],
+]:
     """
-    Compute pixel-wise r and R² between trial-mean originals and reconstructions.
+    Compute pixel-wise r and R² between trial maps and reconstructions.
 
-    Returns (correlation_map, r2_map, condition_mean_entries, summary_metrics).
+    Returns
+    -------
+    corr_map, r2_map, mean_original, mean_reconstruction, mean_diff,
+    condition_mean_entries, summary_metrics
     """
     if test_df.empty:
         raise ValueError("No test trials to evaluate")

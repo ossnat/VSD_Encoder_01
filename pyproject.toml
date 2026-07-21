@@ -7,7 +7,7 @@ name = "vsd-encoder"
 version = "0.1.0"
 description = "VSD encoder: frame-averaged trials, DNN features, linear downstream models"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 dependencies = [
     "h5py>=3.8",
     "matplotlib>=3.7",

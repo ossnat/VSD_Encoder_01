@@ -19,3 +19,25 @@ def test_resnet18_avgpool_shape():
     with torch.no_grad():
         out = model(x)
     assert out.shape == (1, 512, 1, 1)
+
+
+def test_vgg16_block_shapes():
+    model = build_feature_extractor(
+        {"type": "vgg", "name": "vgg16", "pretrained": False, "feature_layer": "block4"},
+        feature_layer="block4",
+    )
+    x = torch.randn(1, 3, 224, 224)
+    with torch.no_grad():
+        out = model(x)
+    assert out.shape == (1, 512, 14, 14)
+
+
+def test_vgg16_avgpool_shape():
+    model = build_feature_extractor(
+        {"type": "vgg", "name": "vgg16", "pretrained": False},
+        feature_layer="avgpool",
+    )
+    x = torch.randn(1, 3, 224, 224)
+    with torch.no_grad():
+        out = model(x)
+    assert out.shape == (1, 512, 7, 7)

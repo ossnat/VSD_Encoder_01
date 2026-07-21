@@ -18,7 +18,10 @@ from src.stimuli.catalog import (
     StimulusSpec,
     load_stimulus_catalog,
     monkey_catalog_path,
-    parse_stimulus_rows,
+)
+from src.stimuli.contrast_letters_catalog import (
+    contrast_letters_catalog_path,
+    load_contrast_letters_catalog,
 )
 from src.stimuli.plotting import plot_all_stimuli
 from src.stimuli.render import RenderConfig, render_stimulus
@@ -62,6 +65,24 @@ def _render_config(cfg: dict) -> RenderConfig:
     )
 
 
+def _coerce_spec(row: dict) -> StimulusSpec:
+    data = dict(row)
+    for key in ("rgb", "letter", "source_path", "background_gray", "cortex_file", "size_deg"):
+        val = data.get(key, None)
+        if val is None:
+            data[key] = None
+        elif isinstance(val, float) and np.isnan(val):
+            data[key] = None
+        elif isinstance(val, str) and val.strip().lower() in {"", "nan", "none"}:
+            data[key] = None
+    rgb = data.get("rgb")
+    if isinstance(rgb, (list, tuple, np.ndarray)):
+        data["rgb"] = tuple(int(x) for x in rgb)
+    if data.get("background_gray") is not None:
+        data["background_gray"] = int(data["background_gray"])
+    return StimulusSpec(**data)
+
+
 def build_stimulus_images(
     *,
     monkey: str,
@@ -79,6 +100,19 @@ def build_stimulus_images(
         monkey=monkey,
         bar_length_deg=render_cfg.bar_length_deg,
     )
+    catalog_paths = [_portable_path(catalog_path, repo)]
+
+    letters_root = encoder_data_root / "letters_stimuli"
+    contrast_path = contrast_letters_catalog_path(encoder_data_root)
+    if contrast_path is not None:
+        contrast_df = load_contrast_letters_catalog(
+            contrast_path,
+            monkey=monkey,
+            letters_root=letters_root,
+        )
+        parsed_df = pd.concat([parsed_df, contrast_df], ignore_index=True)
+        catalog_paths.append(_portable_path(contrast_path, repo))
+
     parsed_out = parsed_catalog_path(stimuli_root, monkey)
     parsed_out.parent.mkdir(parents=True, exist_ok=True)
     parsed_df.to_parquet(parsed_out, index=False)
@@ -86,9 +120,7 @@ def build_stimulus_images(
     manifest_rows: list[dict] = []
     plot_entries: list[tuple[dict, object]] = []
 
-    specs = [
-        StimulusSpec(**row) for row in parsed_df.to_dict(orient="records")
-    ]
+    specs = [_coerce_spec(row) for row in parsed_df.to_dict(orient="records")]
     for spec in specs:
         out_path = stimulus_image_path(
             stimuli_root, spec.monkey, spec.h5_session, spec.condition
@@ -108,9 +140,19 @@ def build_stimulus_images(
             "pos_y_deg": spec.pos_y_deg,
             "is_blank": spec.is_blank,
             "cortex_file": spec.cortex_file,
+            "rgb": spec.rgb,
+            "letter": spec.letter,
+            "source_path": spec.source_path,
+            "background_gray": spec.background_gray,
             "image_path": _portable_path(out_path, repo),
-            "catalog_path": _portable_path(catalog_path, repo),
+            "catalog_path": (
+                _portable_path(contrast_path, repo)
+                if contrast_path is not None
+                and (spec.rgb is not None or spec.shape_type == "letter")
+                else _portable_path(catalog_path, repo)
+            ),
         }
+
         should_render = (
             only_shape_types is None or spec.shape_type in only_shape_types
         )
@@ -140,7 +182,7 @@ def build_stimulus_images(
 
     run_cfg = {
         "monkey": monkey,
-        "catalog_path": _portable_path(catalog_path, repo),
+        "catalog_paths": catalog_paths,
         "manifest_path": _portable_path(out_manifest, repo),
         "n_stimuli": int(len(manifest_df)),
         "render_config": render_cfg.__dict__,
@@ -152,7 +194,7 @@ def build_stimulus_images(
         json.dump(run_cfg, f, indent=2)
 
     print(f"Monkey: {monkey}")
-    print(f"Catalog: {_portable_path(catalog_path, repo)}")
+    print(f"Catalogs: {catalog_paths}")
     print(f"Stimuli rendered: {len(manifest_df)}")
     print(f"Manifest: {_portable_path(out_manifest, repo)}")
     print(f"Images root: {_portable_path(stimuli_root / monkey / 'images', repo)}")

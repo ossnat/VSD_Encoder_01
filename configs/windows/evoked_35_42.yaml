@@ -1,0 +1,7 @@
+# Per-pixel mean over frames [35, 42) — half-open slice (frames 35–41).
+
+window_id: win_0035_0042
+start_frame: 35
+end_frame: 42
+avg_method: mean
+normalization: none

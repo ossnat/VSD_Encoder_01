@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from sklearn.linear_model import Ridge
 
-from src.encoding.ridge import RidgeEncodeResult, alpha_map, bias_map, pearson_r
-from src.encoding.ridge_plotting import plot_alpha_map, select_one_trial_per_condition
+from src.encoding.ridge import RidgeEncodeResult, alpha_map, bias_map, pearson_r, weight_norm_map
+from src.encoding.ridge_plotting import plot_alpha_map, plot_weight_norm_map, select_one_trial_per_condition
 
 
 def test_pearson_r_perfect():
@@ -29,6 +29,9 @@ def test_bias_map_shape():
     )
     bias = bias_map(result, (10, 10))
     assert bias.shape == (10, 10)
+    wnorm = weight_norm_map(result, (10, 10))
+    assert wnorm.shape == (10, 10)
+    assert np.all(wnorm >= 0)
 
 
 def test_fit_ridge_encoder_alpha_per_target(tmp_path):

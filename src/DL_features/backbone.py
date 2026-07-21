@@ -10,9 +10,11 @@ from torchvision.models import (
     ResNet18_Weights,
     ResNet34_Weights,
     ResNet50_Weights,
+    VGG16_Weights,
     resnet18,
     resnet34,
     resnet50,
+    vgg16,
 )
 
 from src.DL_features.gabor_gwp import build_gabor_gwp_extractor
@@ -20,6 +22,25 @@ from src.DL_features.gabor_gwp import build_gabor_gwp_extractor
 # Activation maps after each ResNet stage (post-ReLU block output).
 FEATURE_LAYERS: tuple[str, ...] = ("layer1", "layer2", "layer3", "layer4", "avgpool")
 DEFAULT_FEATURE_LAYER = "layer3"
+
+# VGG16 taps: after each stage MaxPool (maps are post-ReLU of the last conv in that block).
+VGG_FEATURE_LAYERS: tuple[str, ...] = (
+    "block1",
+    "block2",
+    "block3",
+    "block4",
+    "block5",
+    "avgpool",
+)
+# Index of the MaxPool ending each VGG16 features stage.
+_VGG16_BLOCK_CUTS: dict[str, int] = {
+    "block1": 4,
+    "block2": 9,
+    "block3": 16,
+    "block4": 23,
+    "block5": 30,
+}
+DEFAULT_VGG_FEATURE_LAYER = "block4"
 
 
 class ResNetFeatureExtractor(nn.Module):
@@ -69,6 +90,33 @@ class ResNetFeatureExtractor(nn.Module):
         return x
 
 
+class VGGFeatureExtractor(nn.Module):
+    """Run VGG forward and return the activation map at a chosen stage."""
+
+    def __init__(self, backbone: nn.Module, feature_layer: str) -> None:
+        super().__init__()
+        if feature_layer not in VGG_FEATURE_LAYERS:
+            raise ValueError(
+                f"Unsupported VGG feature_layer={feature_layer!r}. "
+                f"Choose from: {', '.join(VGG_FEATURE_LAYERS)}"
+            )
+        self.feature_layer = feature_layer
+        self.features = backbone.features
+        self.avgpool = backbone.avgpool
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.feature_layer == "avgpool":
+            x = self.features(x)
+            return self.avgpool(x)
+
+        cut = _VGG16_BLOCK_CUTS[self.feature_layer]
+        for i, layer in enumerate(self.features):
+            x = layer(x)
+            if i == cut:
+                return x
+        raise RuntimeError(f"VGG cut index {cut} not reached")
+
+
 def _load_resnet(name: str, pretrained: bool) -> nn.Module:
     key = name.lower().strip()
     if key == "resnet18":
@@ -83,12 +131,34 @@ def _load_resnet(name: str, pretrained: bool) -> nn.Module:
     raise ValueError(f"Unsupported ResNet backbone: {name!r}")
 
 
+def _load_vgg(name: str, pretrained: bool) -> nn.Module:
+    key = name.lower().strip()
+    if key == "vgg16":
+        weights = VGG16_Weights.DEFAULT if pretrained else None
+        return vgg16(weights=weights)
+    raise ValueError(f"Unsupported VGG backbone: {name!r}")
+
+
+def feature_layers_for_type(backbone_type: str) -> tuple[str, ...]:
+    """Return supported feature-layer names for a backbone type."""
+    key = backbone_type.lower().strip()
+    if key == "resnet":
+        return FEATURE_LAYERS
+    if key == "vgg":
+        return VGG_FEATURE_LAYERS
+    if key == "gabor_gwp":
+        return ("energy",)
+    raise ValueError(f"Unsupported backbone type: {backbone_type!r}")
+
+
 def _resolve_feature_layer(model_cfg: dict[str, Any]) -> str:
-    layer = model_cfg.get("feature_layer", DEFAULT_FEATURE_LAYER)
     backbone_type = model_cfg.get("type", "resnet")
+    layer = model_cfg.get("feature_layer")
     if backbone_type == "gabor_gwp" and layer in (None, "default", "energy"):
         return "energy"
-    return str(layer)
+    if backbone_type == "vgg":
+        return str(layer or DEFAULT_VGG_FEATURE_LAYER)
+    return str(layer or DEFAULT_FEATURE_LAYER)
 
 
 def build_feature_extractor(
@@ -122,6 +192,11 @@ def build_feature_extractor(
         pt = bool(model_cfg.get("pretrained", True))
         backbone = _load_resnet(name, pt)
         model = ResNetFeatureExtractor(backbone, feature_layer=layer)
+    elif backbone_type == "vgg":
+        name = model_cfg["name"]
+        pt = bool(model_cfg.get("pretrained", True))
+        backbone = _load_vgg(name, pt)
+        model = VGGFeatureExtractor(backbone, feature_layer=layer)
     elif backbone_type == "gabor_gwp":
         model = build_gabor_gwp_extractor(model_cfg)
     else:

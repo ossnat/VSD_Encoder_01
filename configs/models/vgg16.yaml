@@ -1,0 +1,15 @@
+type: vgg
+name: vgg16
+pretrained: true
+preprocess: imagenet_rgb
+
+# Spatial activation map after this VGG stage (post-ReLU, after stage MaxPool).
+# Choices: block1, block2, block3, block4, block5, avgpool
+feature_layer: block4
+
+input_size: 224
+input_channels: 3
+input_scaling: none
+imagenet_normalize: true
+
+batch_size: 16

@@ -53,6 +53,7 @@ def evaluate_pixel_correlation_run(
     model_cfg_path: Path,
     repo: Path | None = None,
     split: str = "test",
+    feature_layer: str | None = None,
 ) -> dict:
     repo = repo or project_root()
     monkey = cfg["monkey"]
@@ -67,7 +68,7 @@ def evaluate_pixel_correlation_run(
     mask_radius = int(eval_cfg["mask_radius"]) if eval_mask is not None else None
 
     model_cfg = _load_yaml(model_cfg_path)
-    feature_layer = model_cfg.get("feature_layer", "layer3")
+    feature_layer = feature_layer or model_cfg.get("feature_layer", "layer3")
     model_name = model_slug(model_cfg)
 
     pairs_path = encoding_pairs_manifest_path(
@@ -255,6 +256,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=project_root() / "configs/models/resnet18.yaml",
     )
+    parser.add_argument(
+        "--feature-layer",
+        type=str,
+        default=None,
+        help="Override feature_layer from the model YAML",
+    )
     parser.add_argument("--monkey", type=str, default=None)
     parser.add_argument("--split", type=str, default="test")
     return parser.parse_args(argv)
@@ -269,6 +276,7 @@ def main(argv: list[str] | None = None) -> int:
         cfg,
         model_cfg_path=args.model,
         split=args.split,
+        feature_layer=args.feature_layer,
     )
     return 0
 

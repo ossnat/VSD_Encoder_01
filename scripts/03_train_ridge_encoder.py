@@ -29,6 +29,7 @@ from src.encoding.ridge import (
     fit_ridge_encoder,
     pearson_r,
     predict_maps,
+    weight_norm_map,
 )
 from src.evaluation.mask import apply_mask_nan, mask_from_eval_cfg, masked_pearson_r
 from src.encoding.ridge_plotting import (
@@ -38,6 +39,7 @@ from src.encoding.ridge_plotting import (
     plot_reconstruction_grid,
     plot_reconstruction_grid_pages,
     plot_reconstruction_pair,
+    plot_weight_norm_map,
     select_one_trial_per_condition,
 )
 from src.encoding.schema import encoding_pairs_manifest_path, ridge_output_dir
@@ -90,6 +92,7 @@ def train_ridge_encoder(
     *,
     model_cfg_path: Path,
     repo: Path | None = None,
+    feature_layer: str | None = None,
 ) -> dict:
     repo = repo or project_root()
     monkey = cfg["monkey"]
@@ -103,7 +106,7 @@ def train_ridge_encoder(
     eval_mask = mask_from_eval_cfg(eval_cfg, spatial_size)
 
     model_cfg = _load_yaml(model_cfg_path)
-    feature_layer = model_cfg.get("feature_layer", "layer3")
+    feature_layer = feature_layer or model_cfg.get("feature_layer", "layer3")
     model_name = model_slug(model_cfg)
 
     pairs_path = encoding_pairs_manifest_path(
@@ -199,18 +202,42 @@ def train_ridge_encoder(
     plot_dir = plots_root / monkey / window_id / model_name / feature_layer
     plot_dir.mkdir(parents=True, exist_ok=True)
 
+    underlay = y_train.reshape(len(train_df), *spatial_size).mean(axis=0)
+
     bias = bias_map(result, spatial_size)
+    bias_plot = bias.copy()
+    if eval_mask is not None:
+        bias_plot = apply_mask_nan(bias_plot, eval_mask)
     plot_bias_map(
-        bias,
+        bias_plot,
         plot_dir / "bias.png",
-        title=f"RidgeCV intercept | {model_name} {feature_layer}",
+        title=(
+            f"RidgeCV intercept | {model_name} {feature_layer}\n"
+            f"gray = train-mean VSD"
+        ),
+        underlay=underlay,
+    )
+
+    weights = weight_norm_map(result, spatial_size)
+    np.save(out_dir / "weight_norm_per_pixel.npy", weights.astype(np.float32))
+    weights_plot = weights.copy()
+    if eval_mask is not None:
+        weights_plot = apply_mask_nan(weights_plot, eval_mask)
+    plot_weight_norm_map(
+        weights_plot,
+        plot_dir / "weight_norm_per_pixel.png",
+        title=(
+            f"RidgeCV ||w||₂ per pixel | {model_name} {feature_layer}\n"
+            f"median={float(np.nanmedian(weights_plot)):.3g} | "
+            f"gray = train-mean VSD"
+        ),
+        underlay=underlay,
     )
 
     if alpha_per_target:
         alphas_spatial = alpha_map(result, spatial_size)
         if eval_mask is not None:
             alphas_spatial = apply_mask_nan(alphas_spatial, eval_mask)
-        underlay = y_train.reshape(len(train_df), *spatial_size).mean(axis=0)
         plot_alpha_map(
             alphas_spatial,
             plot_dir / "alpha_per_pixel.png",
@@ -375,6 +402,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=project_root() / "configs/models/resnet18.yaml",
     )
+    parser.add_argument(
+        "--feature-layer",
+        type=str,
+        default=None,
+        help="Override feature_layer from the model YAML",
+    )
     parser.add_argument("--monkey", type=str, default=None)
     return parser.parse_args(argv)
 
@@ -384,7 +417,11 @@ def main(argv: list[str] | None = None) -> int:
     cfg = _merge_config(args.config, args.window, args.ridge_config)
     if args.monkey is not None:
         cfg["monkey"] = args.monkey
-    train_ridge_encoder(cfg, model_cfg_path=args.model)
+    train_ridge_encoder(
+        cfg,
+        model_cfg_path=args.model,
+        feature_layer=args.feature_layer,
+    )
     return 0
 
 

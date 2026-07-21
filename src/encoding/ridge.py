@@ -187,6 +187,26 @@ def bias_map(result: RidgeEncodeResult, spatial_size: tuple[int, int]) -> np.nda
     return np.asarray(result.model.intercept_, dtype=np.float32).reshape(height, width)
 
 
+def weight_norm_map(
+    result: RidgeEncodeResult,
+    spatial_size: tuple[int, int],
+) -> np.ndarray:
+    """
+    Per-pixel L2 norm of RidgeCV coefficients across features.
+
+    ``coef_`` is ``(n_pixels, n_features)``; the map is ``||w_pixel||_2``.
+    """
+    height, width = spatial_size
+    coef = np.asarray(result.model.coef_, dtype=np.float64)
+    if coef.ndim != 2:
+        raise ValueError(f"Expected 2D coef_, got shape {coef.shape}")
+    if coef.shape[0] != height * width:
+        raise ValueError(
+            f"Expected {height * width} target rows in coef_, got {coef.shape[0]}"
+        )
+    return np.linalg.norm(coef, axis=1).astype(np.float32).reshape(height, width)
+
+
 def alpha_map(result: RidgeEncodeResult, spatial_size: tuple[int, int]) -> np.ndarray:
     """Reshape per-target RidgeCV alphas to a spatial map."""
     if not result.alpha_per_target:

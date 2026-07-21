@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.evaluation.gwp_importance import GwpImportanceMaps
+from src.plotting_colormaps import VSD_CMAP
 
 
 def _normalize(img: np.ndarray, percentile: float = 99.0) -> tuple[np.ndarray, float]:
@@ -31,7 +32,7 @@ def plot_scale_orientation_heatmap(
     data_n, _ = _normalize(data)
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
-    im = ax.imshow(data_n, aspect="auto", cmap="magma", origin="lower")
+    im = ax.imshow(data_n, aspect="auto", cmap=VSD_CMAP, origin="lower")
     ax.set_xticks(range(maps.n_orientations))
     ax.set_xticklabels([f"{d:.0f}°" for d in maps.orientations_deg], rotation=45)
     ax.set_yticks(range(maps.n_scales))
@@ -82,7 +83,12 @@ def plot_scale_spatial_grid(
     n = maps.n_scales
     ncol = min(3, n)
     nrow = int(np.ceil(n / ncol))
-    fig, axes = plt.subplots(nrow, ncol, figsize=(3.2 * ncol, 3.2 * nrow))
+    fig, axes = plt.subplots(
+        nrow,
+        ncol,
+        figsize=(3.2 * ncol + 0.7, 3.2 * nrow),
+        layout="constrained",
+    )
     axes = np.atleast_2d(axes)
 
     for s in range(n):
@@ -104,15 +110,21 @@ def plot_scale_spatial_grid(
                 .numpy()
             )
         img_n, vmax = _normalize(img)
-        ax.imshow(img_n, cmap="hot", vmin=0, vmax=1)
+        im = ax.imshow(img_n, cmap=VSD_CMAP, vmin=0, vmax=1)
         ax.set_title(f"Scale {s} | λ≈{maps.wavelengths_px[s]:.1f}px", fontsize=9)
         ax.axis("off")
 
     for ax in axes.ravel()[n:]:
         ax.axis("off")
 
+    fig.colorbar(
+        im,
+        ax=axes.ravel().tolist(),
+        fraction=0.015,
+        pad=0.02,
+        label="Relative importance",
+    )
     fig.suptitle(title, fontsize=11)
-    fig.tight_layout()
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return output_path
@@ -142,7 +154,7 @@ def plot_feature_location_map(
         )
     img_n, _ = _normalize(img)
     fig, ax = plt.subplots(figsize=(4.5, 4))
-    im = ax.imshow(img_n, cmap="hot", vmin=0, vmax=1)
+    im = ax.imshow(img_n, cmap=VSD_CMAP, vmin=0, vmax=1)
     ax.set_title(title)
     ax.axis("off")
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="Relative importance")
@@ -162,7 +174,7 @@ def plot_vsd_output_importance(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     img_n, _ = _normalize(maps.vsd_output)
     fig, ax = plt.subplots(figsize=(4.5, 4))
-    im = ax.imshow(img_n, cmap="viridis", vmin=0, vmax=1)
+    im = ax.imshow(img_n, cmap=VSD_CMAP, vmin=0, vmax=1)
     ax.set_title(title)
     ax.axis("off")
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04, label="Relative importance")

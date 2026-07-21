@@ -28,6 +28,11 @@ class StimulusSpec:
     pos_y_deg: float
     is_blank: bool
     cortex_file: str | None
+    # Optional fields used by contrast-curve / letter catalogs.
+    rgb: tuple[int, int, int] | None = None
+    letter: str | None = None
+    source_path: str | None = None
+    background_gray: int | None = None
 
 
 def monkey_catalog_path(encoder_data_root: Path, monkey: str) -> Path:
@@ -43,7 +48,10 @@ def monkey_catalog_path(encoder_data_root: Path, monkey: str) -> Path:
 
 def csv_date_to_h5_prefix(csv_date: str) -> str:
     day, month, year = (p.strip() for p in csv_date.split("/"))
-    return f"{int(day):02d}{int(month):02d}{str(year)[-2:]}"
+    y = int(year)
+    if y < 100:
+        y += 2000
+    return f"{int(day):02d}{int(month):02d}{str(y)[-2:]}"
 
 
 def h5_session_id(csv_date: str, session_letter: str) -> str:
@@ -68,6 +76,27 @@ def _session_letter_from_cortex(cortex_file: str | None) -> str | None:
     stem = base.rsplit(".", 1)[0]
     letter = stem[-1]
     return letter if letter.isalpha() else None
+
+
+def _parse_session_letters(session_field: str) -> list[str]:
+    """
+    Parse Session column values such as ``a``, ``b``, or ``a,b,c``.
+
+    Multi-letter blocks mean the same condition list applies to every listed
+    recording session (e.g. 10/7/2018 → a,b; 24/7/2018 → a,b,c).
+    """
+    letters = [
+        part.strip().lower()
+        for part in str(session_field).split(",")
+        if part.strip()
+    ]
+    out: list[str] = []
+    for letter in letters:
+        if len(letter) != 1 or not letter.isalpha():
+            raise ValueError(f"Invalid session letter in Session={session_field!r}")
+        if letter not in out:
+            out.append(letter)
+    return out
 
 
 def _parse_stimulus_text(text: str, *, bar_length_deg: float) -> tuple[str, str, float | None, bool]:
@@ -166,35 +195,45 @@ def parse_stimulus_rows(
             else:
                 raise ValueError(f"Could not parse condition label from {stim_text!r}")
 
-        session_letter = _session_letter_from_cortex(current_cortex)
-        if session_letter is None:
-            if "," in current_session_field:
-                session_letter = current_session_field.split(",")[0].strip()
-            else:
-                session_letter = current_session_field.strip()
+        # Prefer the Session column (supports "a,b" / "a,b,c"). Cortex-file
+        # suffixes are only a fallback when Session is missing/empty — they must
+        # not split one multi-session block across different conditions.
+        try:
+            session_letters = _parse_session_letters(current_session_field)
+        except ValueError:
+            session_letters = []
+        if not session_letters:
+            fallback = _session_letter_from_cortex(current_cortex)
+            if fallback is None:
+                raise ValueError(
+                    f"Could not resolve session letter(s) for stimulus {stim_text!r} "
+                    f"(Session={current_session_field!r}, cortex={current_cortex!r})"
+                )
+            session_letters = [fallback]
 
         color, shape_type, size_deg, is_blank = _parse_stimulus_text(
             desc, bar_length_deg=bar_length_deg
         )
 
-        rows.append(
-            StimulusSpec(
-                monkey=current_monkey,
-                csv_date=current_date,
-                session_letter=session_letter.lower(),
-                h5_session=h5_session_id(current_date, session_letter),
-                condition=condition_label(cond_num),
-                condition_num=cond_num,
-                stimulus_text=str(stim_text).strip(),
-                color=color,
-                shape_type=shape_type,
-                size_deg=size_deg,
-                pos_x_deg=current_position[0],
-                pos_y_deg=current_position[1],
-                is_blank=is_blank,
-                cortex_file=current_cortex,
+        for session_letter in session_letters:
+            rows.append(
+                StimulusSpec(
+                    monkey=current_monkey,
+                    csv_date=current_date,
+                    session_letter=session_letter,
+                    h5_session=h5_session_id(current_date, session_letter),
+                    condition=condition_label(cond_num),
+                    condition_num=cond_num,
+                    stimulus_text=str(stim_text).strip(),
+                    color=color,
+                    shape_type=shape_type,
+                    size_deg=size_deg,
+                    pos_x_deg=current_position[0],
+                    pos_y_deg=current_position[1],
+                    is_blank=is_blank,
+                    cortex_file=current_cortex,
+                )
             )
-        )
 
     return rows
 

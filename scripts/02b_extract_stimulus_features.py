@@ -13,8 +13,10 @@ import yaml
 from src.DL_features.backbone import (
     DEFAULT_FEATURE_LAYER,
     FEATURE_LAYERS,
+    VGG_FEATURE_LAYERS,
     build_feature_extractor,
     default_device,
+    feature_layers_for_type,
 )
 from src.DL_features.extract_stimulus import extract_stimulus_features
 from src.DL_features.schema import model_slug, stimulus_feature_dir, stimulus_map_path
@@ -54,7 +56,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--feature-layer",
         type=str,
         default=None,
-        help=f"Override ResNet feature layer (choices: {', '.join(FEATURE_LAYERS)})",
+        help=(
+            "Override feature layer from the model YAML. "
+            f"ResNet: {', '.join(FEATURE_LAYERS)}. "
+            f"VGG: {', '.join(VGG_FEATURE_LAYERS)}."
+        ),
     )
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--device", type=str, default="auto", help="auto|cpu|cuda|mps")
@@ -89,8 +95,13 @@ def main(argv: list[str] | None = None) -> int:
         "feature_layer", DEFAULT_FEATURE_LAYER
     )
     backbone_type = model_cfg.get("type", "resnet")
-    if args.feature_layer and backbone_type != "resnet":
-        raise ValueError("--feature-layer override is only supported for ResNet models")
+    if args.feature_layer:
+        allowed = feature_layers_for_type(backbone_type)
+        if args.feature_layer not in allowed:
+            raise ValueError(
+                f"--feature-layer={args.feature_layer!r} not supported for "
+                f"type={backbone_type!r}. Choose from: {', '.join(allowed)}"
+            )
 
     model = build_feature_extractor(model_cfg, feature_layer=feature_layer)
 

@@ -20,6 +20,7 @@ from src.stimuli.render import (
 
 def test_h5_session_mapping():
     assert csv_date_to_h5_prefix("27/6/2018") == "270618"
+    assert csv_date_to_h5_prefix("23/5/18") == "230518"
     assert h5_session_id("27/6/2018", "b") == "270618b"
     assert condition_label(1) == "condAN1"
 
@@ -80,6 +81,68 @@ def test_parse_bar_length_from_csv():
     assert specs[0].size_deg == 1.0
     assert specs[1].shape_type == "bar_horizontal"
     assert specs[1].size_deg == 1.0
+
+
+def test_parse_multi_session_block_expands_all_letters():
+    """Session='a,b' / 'a,b,c' applies every condition to each listed session."""
+    df = pd.DataFrame(
+        [
+            {
+                "Monkey": "Gandalf",
+                "Date": "10/7/2018",
+                "Session": "a,b",
+                "cortex file": "gan_2018_07_10a.1",
+                "stimulus (need to check r/d)": "cond1: black point 0.1 diameter",
+                "Stimulus Position": "(0.6,-0.75)",
+            },
+            {
+                "Monkey": np.nan,
+                "Date": np.nan,
+                "Session": np.nan,
+                "cortex file": np.nan,
+                "stimulus (need to check r/d)": "cond2: black point 0.05 diameter",
+                "Stimulus Position": np.nan,
+            },
+            {
+                "Monkey": np.nan,
+                "Date": "24/7/2018",
+                "Session": "a,b,c",
+                "cortex file": "gan_2018_07_10a.1",
+                "stimulus (need to check r/d)": "cond1: black point 0.1 diameter",
+                "Stimulus Position": "(0.6,-0.75)",
+            },
+            {
+                "Monkey": np.nan,
+                "Date": np.nan,
+                "Session": np.nan,
+                # Cortex suffixes must NOT reassign conditions to a single session.
+                "cortex file": "gan_2018_07_10b.1",
+                "stimulus (need to check r/d)": "cond2: black point 0.95 radius",
+                "Stimulus Position": "(0,0)",
+            },
+        ]
+    )
+    specs = parse_stimulus_rows(df, monkey="gandalf", bar_length_deg=0.3)
+
+    july10 = [s for s in specs if s.csv_date == "10/7/2018"]
+    assert {(s.h5_session, s.condition) for s in july10} == {
+        ("100718a", "condAN1"),
+        ("100718b", "condAN1"),
+        ("100718a", "condAN2"),
+        ("100718b", "condAN2"),
+    }
+
+    july24 = [s for s in specs if s.csv_date == "24/7/2018"]
+    assert {(s.h5_session, s.condition) for s in july24} == {
+        ("240718a", "condAN1"),
+        ("240718b", "condAN1"),
+        ("240718c", "condAN1"),
+        ("240718a", "condAN2"),
+        ("240718b", "condAN2"),
+        ("240718c", "condAN2"),
+    }
+    cond2 = [s for s in july24 if s.condition == "condAN2"]
+    assert all(s.pos_x_deg == 0.0 and s.pos_y_deg == 0.0 for s in cond2)
 
 
 def test_point_size_ratio():

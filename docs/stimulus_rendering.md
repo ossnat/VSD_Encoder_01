@@ -96,6 +96,9 @@ sbatch slurm/build_stimulus_images.slurm
 ## Notes
 
 - The CSV uses grouped blocks: session header row followed by condition rows with forward-filled `Date`, `Session`, and usually `Stimulus Position`.
-- Multi-session blocks (`Session = a,b,c`) use the `cortex file` suffix (`...a.1`, `...b.1`) when available.
+- Multi-session blocks (`Session = a,b` or `a,b,c`) expand each condition to **every** listed session letter (same stimulus content; separate PNG under each `images/{h5_session}/`). Cortex-file suffixes on condition rows are **not** used to assign a single session.
+- An additional catalog `Data/EncoderData/ContrastCurve_Letters_*_ExpSummary.csv` is merged in stage 01b:
+  - **Contrast curves** — filled circles with RGB from parentheses; Cond6 Blank / Cond8 Error skipped; target location components are swapped to the shapes-CSV convention.
+  - **Letters** — mats under `Data/EncoderData/letters_stimuli/` (session `c`/`d` prefer `2011C`/`2011D`); Control-attention rows skipped.
 - Methods reference: `Data/EncoderData/8267.full.pdf`
-- **Catalog QC:** the build script prints a warning if the same `(h5_session, condition)` appears twice (e.g. `240718c` / `condAN6` in the current Gandalf CSV). Resolve in the source CSV if needed.
+- **Catalog QC:** the build script prints a warning if the same `(h5_session, condition)` appears twice (e.g. `240718*` / `condAN6` blank vs bar in the current Gandalf CSV). Encoding-pair joins prefer the non-blank row.

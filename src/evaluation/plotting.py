@@ -13,6 +13,7 @@ import pandas as pd
 from matplotlib.patches import Circle
 
 from src.evaluation.mask import apply_mask_nan
+from src.plotting_colormaps import VSD_CMAP
 
 
 def _shared_limits(images: list[np.ndarray]) -> tuple[float, float]:
@@ -33,14 +34,16 @@ def plot_pixel_correlation_heatmap(
     underlay: np.ndarray | None = None,
     underlay_alpha: float = 0.45,
 ) -> Path:
-    """Save a BWR heatmap of per-pixel correlation values."""
+    """Save a mapgeog heatmap of per-pixel correlation values."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(4.5, 4))
     if underlay is not None:
         u_lo, u_hi = _shared_limits([underlay])
-        ax.imshow(underlay, cmap="gray", vmin=u_lo, vmax=u_hi, alpha=underlay_alpha)
-    im = ax.imshow(corr_map, cmap="bwr", vmin=vmin, vmax=vmax, alpha=0.85)
+        ax.imshow(
+            underlay, cmap=VSD_CMAP, vmin=u_lo, vmax=u_hi, alpha=underlay_alpha
+        )
+    im = ax.imshow(corr_map, cmap=VSD_CMAP, vmin=vmin, vmax=vmax, alpha=0.85)
     ax.set_title(title, fontsize=10)
     ax.axis("off")
     fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
@@ -63,20 +66,25 @@ def plot_backbone_correlation_comparison(
     """Side-by-side pixel-r heatmaps with a shared VSD underlay."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
     n = len(panels)
-    fig, axes = plt.subplots(1, n, figsize=(4.5 * n, 4.5))
+    fig, axes = plt.subplots(
+        1, n, figsize=(4.5 * n + 0.7, 4.5), layout="constrained"
+    )
     if n == 1:
         axes = [axes]
 
     u_lo, u_hi = _shared_limits([underlay])
     for ax, (label, corr_map) in zip(axes, panels):
-        ax.imshow(underlay, cmap="gray", vmin=u_lo, vmax=u_hi, alpha=underlay_alpha)
-        im = ax.imshow(corr_map, cmap="bwr", vmin=vmin, vmax=vmax, alpha=0.82)
+        ax.imshow(
+            underlay, cmap=VSD_CMAP, vmin=u_lo, vmax=u_hi, alpha=underlay_alpha
+        )
+        im = ax.imshow(
+            corr_map, cmap=VSD_CMAP, vmin=vmin, vmax=vmax, alpha=0.82
+        )
         ax.set_title(label, fontsize=10)
         ax.axis("off")
 
     fig.colorbar(im, ax=axes, fraction=0.03, pad=0.02)
     fig.suptitle(title, fontsize=11)
-    fig.tight_layout()
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return output_path
@@ -117,9 +125,9 @@ def plot_pixel_mean_maps(
     diff_lim = diff_lim if diff_lim > 1e-8 else 1.0
 
     panels = [
-        (mean_original, "Trial-mean original", "viridis", vmin, vmax),
-        (mean_reconstruction, "Trial-mean reconstruction", "viridis", vmin, vmax),
-        (mean_diff, "Mean recon − original", "RdBu_r", -diff_lim, diff_lim),
+        (mean_original, "Trial-mean original", VSD_CMAP, vmin, vmax),
+        (mean_reconstruction, "Trial-mean reconstruction", VSD_CMAP, vmin, vmax),
+        (mean_diff, "Mean recon − original", VSD_CMAP, -diff_lim, diff_lim),
     ]
     for ax, (img, subtitle, cmap, lo, hi) in zip(axes, panels):
         im = ax.imshow(img, cmap=cmap, vmin=lo, vmax=hi)
@@ -160,12 +168,13 @@ def plot_masked_map_panel(
     cmap: str,
     vmin: float,
     vmax: float,
-) -> None:
+) -> object:
     """Single map panel with NaN outside mask and circle outline."""
-    ax.imshow(apply_mask_nan(image, mask), cmap=cmap, vmin=vmin, vmax=vmax)
+    im = ax.imshow(apply_mask_nan(image, mask), cmap=cmap, vmin=vmin, vmax=vmax)
     _add_mask_outline(ax, spatial_size, mask_radius)
     ax.set_title(title, fontsize=9)
     ax.axis("off")
+    return im
 
 
 def plot_test_conditions_grid(
@@ -189,7 +198,9 @@ def plot_test_conditions_grid(
         return output_path
 
     n = len(conditions)
-    fig, axes = plt.subplots(n, 3, figsize=(10.5, 3.2 * n))
+    fig, axes = plt.subplots(
+        n, 3, figsize=(11.3, 3.2 * n), layout="constrained"
+    )
     if n == 1:
         axes = np.array([axes])
 
@@ -218,13 +229,13 @@ def plot_test_conditions_grid(
             row_title += f" | mean trial r={tr:.3f}"
         images = [orig, recon, diff]
         specs = [
-            ("viridis", vmin, vmax),
-            ("viridis", vmin, vmax),
-            ("RdBu_r", -diff_lim, diff_lim),
+            (VSD_CMAP, vmin, vmax),
+            (VSD_CMAP, vmin, vmax),
+            (VSD_CMAP, -diff_lim, diff_lim),
         ]
         for col, (img, (cmap, lo, hi)) in enumerate(zip(images, specs)):
             title = row_title if col == 0 else col_titles[col]
-            plot_masked_map_panel(
+            im = plot_masked_map_panel(
                 axes[row, col],
                 img,
                 mask,
@@ -235,12 +246,19 @@ def plot_test_conditions_grid(
                 vmin=lo,
                 vmax=hi,
             )
+            if row == n - 1:
+                fig.colorbar(
+                    im,
+                    ax=axes[:, col].tolist(),
+                    fraction=0.02,
+                    pad=0.02,
+                    label=col_titles[col],
+                )
 
     fig.suptitle(
         f"{model_label} | {split} conditions | masked r={mask_radius}",
         fontsize=11,
     )
-    fig.tight_layout()
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return output_path
@@ -343,14 +361,19 @@ def plot_condition_mean_originals(
     ncol = min(4, n)
     nrow = int(np.ceil(n / ncol))
 
-    fig, axes = plt.subplots(nrow, ncol, figsize=(3.5 * ncol, 3.5 * nrow))
+    fig, axes = plt.subplots(
+        nrow,
+        ncol,
+        figsize=(3.5 * ncol + 0.7, 3.5 * nrow),
+        layout="constrained",
+    )
     axes = np.atleast_2d(axes)
     for ax in axes.ravel():
         ax.axis("off")
 
     for ax, entry in zip(axes.ravel(), conditions):
         image = entry["map"]
-        ax.imshow(image, cmap="viridis", vmin=vmin, vmax=vmax)
+        im = ax.imshow(image, cmap=VSD_CMAP, vmin=vmin, vmax=vmax)
         ax.set_title(
             f"{entry['date']} | {entry['condition']}\n"
             f"n = {entry['n_trials']} trials",
@@ -358,8 +381,14 @@ def plot_condition_mean_originals(
         )
         ax.axis("off")
 
+    fig.colorbar(
+        im,
+        ax=axes.ravel().tolist(),
+        fraction=0.015,
+        pad=0.02,
+        label="Mean VSD signal",
+    )
     fig.suptitle(title, fontsize=11)
-    fig.tight_layout()
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return output_path

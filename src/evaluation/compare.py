@@ -38,11 +38,14 @@ def collect_backbone_metrics(
     window_id: str,
     model_cfg_paths: list[Path],
     split: str = "test",
+    feature_layers: list[str] | None = None,
 ) -> pd.DataFrame:
     """
     Gather metrics for each model config from ridge + evaluation artifacts.
 
     Returns one row per (model_slug, feature_layer).
+    If ``feature_layers`` is set, each model YAML is expanded across those layers
+    (YAML ``feature_layer`` is ignored).
     """
     monkey = cfg["monkey"]
     ridge_root = resolve_data_path(cfg["paths"]["ridge_encode_root"], repo)
@@ -54,51 +57,59 @@ def collect_backbone_metrics(
         with model_path.open() as f:
             model_cfg = yaml.safe_load(f)
         slug = model_slug(model_cfg)
-        feature_layer = str(model_cfg.get("feature_layer", "layer3"))
+        layers = feature_layers or [str(model_cfg.get("feature_layer", "layer3"))]
 
-        ridge_dir = ridge_output_dir(ridge_root, monkey, window_id, slug, feature_layer)
-        ridge_metrics = _load_json(ridge_dir / "metrics.json") or {}
+        for feature_layer in layers:
+            ridge_dir = ridge_output_dir(
+                ridge_root, monkey, window_id, slug, feature_layer
+            )
+            ridge_metrics = _load_json(ridge_dir / "metrics.json") or {}
 
-        eval_json = _load_json(
-            eval_root / monkey / window_id / slug / feature_layer / f"pixel_evaluation_{split}.json"
-        )
-        eval_metrics = (eval_json or {}).get("metrics", {})
+            eval_json = _load_json(
+                eval_root
+                / monkey
+                / window_id
+                / slug
+                / feature_layer
+                / f"pixel_evaluation_{split}.json"
+            )
+            eval_metrics = (eval_json or {}).get("metrics", {})
 
-        stim_cfg_path = (
-            stim_feat_root / monkey / slug / feature_layer / "config.json"
-        )
-        feature_shape = _feature_shape_from_stimulus_config(stim_cfg_path)
+            stim_cfg_path = (
+                stim_feat_root / monkey / slug / feature_layer / "config.json"
+            )
+            feature_shape = _feature_shape_from_stimulus_config(stim_cfg_path)
 
-        try:
-            model_config = str(model_path.relative_to(repo))
-        except ValueError:
-            model_config = str(model_path)
+            try:
+                model_config = str(model_path.relative_to(repo))
+            except ValueError:
+                model_config = str(model_path)
 
-        row: dict[str, Any] = {
-            "model_config": model_config,
-            "model_slug": slug,
-            "feature_layer": feature_layer,
-            "model_type": model_cfg.get("type", "resnet"),
-            "preprocess": model_cfg.get("preprocess", "imagenet_rgb"),
-            "alpha": ridge_metrics.get("alpha"),
-            "n_train": ridge_metrics.get("n_train"),
-            "r_mean_train": ridge_metrics.get("r_mean_train"),
-            "r_mean_val": ridge_metrics.get("r_mean_val"),
-            "r_mean_test": ridge_metrics.get("r_mean_test"),
-            "r_mean_train_masked": ridge_metrics.get("r_mean_train_masked"),
-            "r_mean_val_masked": ridge_metrics.get("r_mean_val_masked"),
-            "r_mean_test_masked": ridge_metrics.get("r_mean_test_masked"),
-            "eval_mean_r": eval_metrics.get("mean_r"),
-            "eval_mean_r2": eval_metrics.get("mean_r2"),
-            "eval_mean_r_masked": eval_metrics.get("mean_r_masked"),
-            "eval_mean_r2_masked": eval_metrics.get("mean_r2_masked"),
-            "eval_n_trials": eval_metrics.get("n_test_trials"),
-            "feature_shape": feature_shape,
-            "ridge_dir": str(ridge_dir.relative_to(repo.parent))
-            if ridge_dir.exists()
-            else None,
-        }
-        rows.append(row)
+            row: dict[str, Any] = {
+                "model_config": model_config,
+                "model_slug": slug,
+                "feature_layer": feature_layer,
+                "model_type": model_cfg.get("type", "resnet"),
+                "preprocess": model_cfg.get("preprocess", "imagenet_rgb"),
+                "alpha": ridge_metrics.get("alpha"),
+                "n_train": ridge_metrics.get("n_train"),
+                "r_mean_train": ridge_metrics.get("r_mean_train"),
+                "r_mean_val": ridge_metrics.get("r_mean_val"),
+                "r_mean_test": ridge_metrics.get("r_mean_test"),
+                "r_mean_train_masked": ridge_metrics.get("r_mean_train_masked"),
+                "r_mean_val_masked": ridge_metrics.get("r_mean_val_masked"),
+                "r_mean_test_masked": ridge_metrics.get("r_mean_test_masked"),
+                "eval_mean_r": eval_metrics.get("mean_r"),
+                "eval_mean_r2": eval_metrics.get("mean_r2"),
+                "eval_mean_r_masked": eval_metrics.get("mean_r_masked"),
+                "eval_mean_r2_masked": eval_metrics.get("mean_r2_masked"),
+                "eval_n_trials": eval_metrics.get("n_test_trials"),
+                "feature_shape": feature_shape,
+                "ridge_dir": str(ridge_dir.relative_to(repo.parent))
+                if ridge_dir.exists()
+                else None,
+            }
+            rows.append(row)
 
     return pd.DataFrame(rows)
 

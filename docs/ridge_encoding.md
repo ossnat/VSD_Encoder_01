@@ -38,13 +38,14 @@ plots/ridge_encode/
 
 ## QC plots
 
-1. **bias.png** — `intercept_` reshaped to 100×100
-2. **alpha_per_pixel.png** — selected α per pixel (log scale), over train-mean VSD underlay (when `alpha_per_target`)
-3. **by_condition/{date}__{condition}.png** — side-by-side per condition (one trial each):
+1. **bias.png** — `intercept_` reshaped to 100×100 (over train-mean VSD underlay)
+2. **weight_norm_per_pixel.png** — per-pixel L2 norm of Ridge weights across features (same underlay style)
+3. **alpha_per_pixel.png** — selected α per pixel (log scale), over train-mean VSD underlay (when `alpha_per_target`)
+4. **by_condition/{date}__{condition}.png** — side-by-side per condition (one trial each):
    - **Original (H5 mean)** — mean of raw trial frames `[start_frame, end_frame)` from session H5
    - **Reconstructed (RidgeCV)** — model prediction (same for all trials in a condition)
-4. **reconstructions_by_condition.png** — paginated orig|recon grid (all conditions)
-5. **reconstructions_by_condition_recon_only.png** — grid of reconstructions only for shape comparison
+5. **reconstructions_by_condition.png** — paginated orig|recon grid (all conditions)
+6. **reconstructions_by_condition_recon_only.png** — grid of reconstructions only for shape comparison
 
 ## Run
 

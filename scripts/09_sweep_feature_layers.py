@@ -9,16 +9,17 @@ import subprocess
 import sys
 from pathlib import Path
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import pandas as pd
 import yaml
 
 from src.DL_features.backbone import feature_layers_for_type
 from src.DL_features.schema import model_slug
-from src.evaluation.compare import collect_backbone_metrics, comparison_output_dir
+from src.evaluation.compare import collect_backbone_metrics
+from src.evaluation.layer_sweep import (
+    layer_sweep_dir,
+    plot_layer_mean_pixel_r,
+    validate_layer_artifacts,
+)
 from src.paths import project_root
 
 
@@ -36,51 +37,6 @@ def _merge_config(default_path: Path, window_path: Path) -> dict:
 def _run(cmd: list[str], *, repo: Path) -> None:
     print("+", " ".join(cmd), flush=True)
     subprocess.run(cmd, cwd=repo, check=True)
-
-
-def plot_layer_mean_pixel_r(
-    df: pd.DataFrame,
-    output_path: Path,
-    *,
-    title: str,
-    layer_order: list[str] | None = None,
-) -> Path:
-    """Simple bar chart of masked mean pixel r across feature layers."""
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    if df.empty:
-        return output_path
-
-    plot_df = df.copy()
-    if layer_order:
-        order = [layer for layer in layer_order if layer in set(plot_df["feature_layer"])]
-        plot_df["feature_layer"] = pd.Categorical(
-            plot_df["feature_layer"], categories=order, ordered=True
-        )
-        plot_df = plot_df.sort_values("feature_layer").reset_index(drop=True)
-    else:
-        plot_df = plot_df.sort_values("feature_layer").reset_index(drop=True)
-    labels = plot_df["feature_layer"].tolist()
-    vals = plot_df["eval_mean_r_masked"].astype(float).fillna(0.0).to_numpy()
-
-    fig, ax = plt.subplots(figsize=(max(6, len(labels) * 1.4), 4))
-    bars = ax.bar(range(len(labels)), vals, width=0.65, color="steelblue")
-    ax.set_xticks(range(len(labels)), labels, rotation=15, ha="right")
-    ax.set_ylabel("Mean pixel r (masked)")
-    ax.set_title(title)
-    ax.axhline(0.0, color="k", linewidth=0.5)
-    for bar, val in zip(bars, vals):
-        ax.text(
-            bar.get_x() + bar.get_width() / 2,
-            bar.get_height(),
-            f"{val:.3f}",
-            ha="center",
-            va="bottom",
-            fontsize=8,
-        )
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close(fig)
-    return output_path
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -111,7 +67,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Feature layers to sweep (default: all supported for this model type)",
     )
-    parser.add_argument("--split", type=str, default="test")
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="val",
+        help="Split passed to stage 04 during the sweep (default: val for layer selection)",
+    )
     parser.add_argument("--device", type=str, default="auto")
     parser.add_argument("--monkey", type=str, default=None)
     parser.add_argument(
@@ -226,6 +187,23 @@ def main(argv: list[str] | None = None) -> int:
                 cmd.extend(["--monkey", args.monkey])
             _run(cmd, repo=repo)
 
+        missing = validate_layer_artifacts(
+            repo=repo,
+            cfg=cfg,
+            window_id=window_id,
+            model_slug_str=slug,
+            feature_layer=layer,
+            split=args.split,
+            require_ridge=not args.skip_train,
+            require_eval=not args.skip_eval,
+        )
+        if missing:
+            print(
+                f"WARNING: {slug}/{layer} missing artifacts after sweep: "
+                + ", ".join(missing),
+                flush=True,
+            )
+
     df = collect_backbone_metrics(
         repo=repo,
         cfg=cfg,
@@ -235,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:
         feature_layers=layers,
     )
 
-    out_dir = comparison_output_dir(repo, cfg, window_id) / f"layer_sweep_{slug}"
+    out_dir = layer_sweep_dir(repo, cfg, window_id, slug)
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_path = out_dir / "layer_comparison.csv"
     df.to_csv(csv_path, index=False)
@@ -255,7 +233,10 @@ def main(argv: list[str] | None = None) -> int:
     plot_layer_mean_pixel_r(
         df,
         plot_path,
-        title=f"{slug} | mean pixel r (masked) by layer | {window_id}",
+        title=(
+            f"{slug} | mean pixel r (masked) by layer | {window_id} | "
+            f"split={args.split}"
+        ),
         layer_order=layers,
     )
 
@@ -264,6 +245,7 @@ def main(argv: list[str] | None = None) -> int:
         "feature_layer",
         "feature_shape",
         "eval_mean_r_masked",
+        "r_mean_val_masked",
         "r_mean_test_masked",
     ]
     present = [c for c in cols if c in df.columns]

@@ -296,7 +296,20 @@ Increase in `slurm/train_ridge_encoder.slurm`:
 [ ] Check plots/stimuli/ and plots/vsd_vs_stimulus/
 [ ] bash scripts/submit_encoding_jobs.sh   (or sbatch slurm/run_encoding_heavy.slurm)
 [ ] Check plots/ridge_encode/ after jobs finish
+[ ] Optional: bash scripts/submit_layer_sweeps.sh for ResNet/VGG layer sweeps
 ```
+
+---
+
+## Optional — backbone layer sweeps
+
+After prepare stages and encoding pairs exist for `configs/windows/evoked_35_42.yaml`:
+
+```bash
+bash scripts/submit_layer_sweeps.sh
+```
+
+See [`backbone_layer_sweep.md`](backbone_layer_sweep.md) for local commands, resume options, and output paths.
 
 ---
 
@@ -308,4 +321,5 @@ Increase in `slurm/train_ridge_encoder.slurm`:
 - `docs/encoding_pairs.md` — trial join manifest
 - `docs/DL_feature_extraction.md` — CNN features
 - `docs/ridge_encoding.md` — RidgeCV model
+- `docs/backbone_layer_sweep.md` — ResNet/VGG layer sweeps + PDF report
 - `docs/DATA_LAYOUT.md` — H5 / split file layout

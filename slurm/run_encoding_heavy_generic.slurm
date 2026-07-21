@@ -3,7 +3,6 @@
 #SBATCH --output=/home/dsi/ossnat/VSD_FM/VSD_Encoder_01/slurm_err_out/vsd_encoding_%j.out
 #SBATCH --error=/home/dsi/ossnat/VSD_FM/VSD_Encoder_01/slurm_err_out/vsd_encoding_%j.err
 #SBATCH --partition=generic
-#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=04:00:00
@@ -30,7 +29,7 @@ CONFIG="${CONFIG:-configs/default.yaml}"
 WINDOW_CONFIG="${WINDOW_CONFIG:-configs/windows/evoked_35_42.yaml}"
 MODEL_CONFIG="${MODEL_CONFIG:-configs/models/resnet18.yaml}"
 RIDGE_CONFIG="${RIDGE_CONFIG:-configs/ridge/default.yaml}"
-DEVICE="${DEVICE:-cuda}"
+DEVICE="${DEVICE:-cpu}"
 MONKEY="${MONKEY:-}"
 OVERWRITE="${OVERWRITE:-}"
 

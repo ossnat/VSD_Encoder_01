@@ -22,6 +22,9 @@ def model_slug(model_cfg_or_name: dict[str, Any] | str, pretrained: bool = True)
         if backbone_type == "vgg":
             pt = bool(cfg.get("pretrained", True))
             return f"{name}_{'imagenet' if pt else 'random'}"
+        if backbone_type == "cornet":
+            pt = bool(cfg.get("pretrained", True))
+            return f"{name}_{'imagenet' if pt else 'random'}"
         if backbone_type == "gabor_gwp":
             base = f"{name}_gwp"
             variant = cfg.get("variant")

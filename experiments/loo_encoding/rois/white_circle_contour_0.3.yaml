@@ -1,0 +1,10 @@
+stimulus_id: white_circle_contour_0.3
+x0: 24
+y0: 28
+width: 48
+height: 30
+status: accepted
+map_shape:
+- 100
+- 100
+mask_npy: white_circle_contour_0.3__mask.npy

@@ -1,0 +1,43 @@
+stimulus_id: white_circle_contour_0.3
+x0: 24
+y0: 28
+width: 48
+height: 30
+status: accepted
+method: stim_minus_global_common
+n_stim_trials: 26
+n_common_trials: 1542
+n_sessions: 1
+roi:
+  x0: 24
+  y0: 28
+  width: 48
+  height: 30
+  row_start: 28
+  row_end: 58
+  col_start: 24
+  col_end: 72
+proposal_notes: 'Manual ROI tweak 2026-07-23: x0=24, y0=28, w=48, h=30 (was 0,0,83x67).
+  Placed by eye on stimulus-mean hot streak; not auto residual union. Marked accepted
+  2026-07-23 (user: keep).'
+method_policy: "global_common = trial-weighted grand mean of ALL non-blank trials\
+  \ across ALL sessions. residual = stim_mean \u2212 global_common (auto box placement\
+  \ only). Review figure shows the stimulus mean with the box."
+monkey: gandalf
+dates_conditions:
+- date: 290518a
+  condition: condAN3
+session_details:
+- date: 290518a
+  n_stim_trials: 26
+  n_global_common_trials: 1542
+  common_scope: global_all_trials_all_sessions
+shape_type: circle_contour
+color: white
+size_deg: 0.3
+letter: null
+stimulus_text_example: 'cond3: white circle contour 0.3 d/r?'
+common_scope: global_all_trials_all_sessions
+figure: experiments/loo_encoding/roi_review/figures/white_circle_contour_0.3__mean_map_roi.png
+mask_npy: experiments/loo_encoding/roi_review/rois/white_circle_contour_0.3__mask.npy
+colormap: mapgeog

@@ -20,7 +20,7 @@ MODEL_CONFIG="${MODEL_CONFIG:-configs/models/vgg16.yaml}"
 MONKEY="${MONKEY:-}"
 DEVICE="${DEVICE:-cpu}"
 SPLIT="${SPLIT:-val}"
-LAYERS="${LAYERS:-block3 block4 block5}"
+LAYERS="${LAYERS:-block1_pool7 block1_pool14 block2_pool7 block2_pool14 block3_pool14 block4 block5}"
 
 mkdir -p logs slurm_err_out
 export MPLBACKEND=Agg
@@ -32,7 +32,7 @@ if [[ ! -x "${PYTHON}" ]]; then
   exit 1
 fi
 
-CMD=("${PYTHON}" scripts/09_sweep_feature_layers.py
+CMD=("${PYTHON}" scripts/13_sweep_vgg16_layers.py
   --config "${CONFIG}"
   --window "${WINDOW_CONFIG}"
   --ridge-config "${RIDGE_CONFIG}"

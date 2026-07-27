@@ -1,0 +1,10 @@
+stimulus_id: black_bar_horizontal_0.3
+x0: 28
+y0: 5
+width: 40
+height: 53
+status: accepted
+map_shape:
+- 100
+- 100
+mask_npy: black_bar_horizontal_0.3__mask.npy

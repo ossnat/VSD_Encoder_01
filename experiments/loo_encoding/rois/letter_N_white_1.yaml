@@ -1,0 +1,10 @@
+stimulus_id: letter_N_white_1
+x0: 12
+y0: 28
+width: 76
+height: 40
+status: accepted
+map_shape:
+- 100
+- 100
+mask_npy: letter_N_white_1__mask.npy

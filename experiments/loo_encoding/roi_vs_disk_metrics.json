@@ -1,0 +1,145 @@
+{
+  "label": "First-pass comparison (not LOO)",
+  "model_slug": "resnet18_imagenet",
+  "feature_layer": "layer3",
+  "window_id": "win_0035_0042",
+  "start_frame": 35,
+  "end_frame": 42,
+  "monkey": "gandalf",
+  "disk_mask": {
+    "type": "circle",
+    "radius": 50,
+    "n_pixels": 7843
+  },
+  "split_policy": "pixel-r: full test split (all conditions); spatial-r per stimulus: test > val > train",
+  "model_path": "/Users/ossnat/GondaResearch/VSD_FM/Data/VSD_Encoder_01/ridge_encode/gandalf/win_0035_0042/resnet18_imagenet/layer3/model.joblib",
+  "encoding_pairs_manifest": "/Users/ossnat/GondaResearch/VSD_FM/Data/VSD_Encoder_01/encoding_pairs/gandalf/win_0035_0042/manifest.parquet",
+  "stimuli": [
+    {
+      "stimulus_id": "black_point_0.1",
+      "split": "test",
+      "spatial_split": "test",
+      "n_trials": 152,
+      "n_trials_spatial": 17,
+      "n_conditions": 7,
+      "n_conditions_spatial": 1,
+      "split_counts": {
+        "train": 89,
+        "val": 46,
+        "test": 17
+      },
+      "n_roi_pixels": 832,
+      "mean_pixel_r_disk": 0.2791207432746887,
+      "mean_pixel_r_roi": 0.55960613489151,
+      "mean_trial_spatial_r_disk": -0.01681873306726719,
+      "mean_trial_spatial_r_roi": 0.2935366267707055
+    },
+    {
+      "stimulus_id": "black_bar_vertical_0.3",
+      "split": "test",
+      "spatial_split": "val",
+      "n_trials": 152,
+      "n_trials_spatial": 34,
+      "n_conditions": 7,
+      "n_conditions_spatial": 1,
+      "split_counts": {
+        "train": 44,
+        "val": 34
+      },
+      "n_roi_pixels": 2100,
+      "mean_pixel_r_disk": 0.2791207432746887,
+      "mean_pixel_r_roi": 0.4775269627571106,
+      "mean_trial_spatial_r_disk": 0.23438405436728818,
+      "mean_trial_spatial_r_roi": 0.45758889032158706
+    },
+    {
+      "stimulus_id": "black_circle_contour_0.3",
+      "split": "test",
+      "spatial_split": "train",
+      "n_trials": 152,
+      "n_trials_spatial": 155,
+      "n_conditions": 7,
+      "n_conditions_spatial": 7,
+      "split_counts": {
+        "train": 155
+      },
+      "n_roi_pixels": 2400,
+      "mean_pixel_r_disk": 0.2791207432746887,
+      "mean_pixel_r_roi": 0.4674857556819916,
+      "mean_trial_spatial_r_disk": 0.28858312099645805,
+      "mean_trial_spatial_r_roi": 0.4679616204408966
+    },
+    {
+      "stimulus_id": "letter_A_white_1",
+      "split": "test",
+      "spatial_split": "test",
+      "n_trials": 152,
+      "n_trials_spatial": 16,
+      "n_conditions": 7,
+      "n_conditions_spatial": 1,
+      "split_counts": {
+        "train": 22,
+        "test": 16
+      },
+      "n_roi_pixels": 3225,
+      "mean_pixel_r_disk": 0.2791207432746887,
+      "mean_pixel_r_roi": 0.4014089107513428,
+      "mean_trial_spatial_r_disk": 0.35073546913311926,
+      "mean_trial_spatial_r_roi": 0.4461263263564551
+    },
+    {
+      "stimulus_id": "white_filled_circle_0.8",
+      "split": "test",
+      "spatial_split": "test",
+      "n_trials": 152,
+      "n_trials_spatial": 23,
+      "n_conditions": 7,
+      "n_conditions_spatial": 1,
+      "split_counts": {
+        "train": 68,
+        "val": 45,
+        "test": 23
+      },
+      "n_roi_pixels": 2772,
+      "mean_pixel_r_disk": 0.2791207432746887,
+      "mean_pixel_r_roi": 0.42803290486335754,
+      "mean_trial_spatial_r_disk": 0.4956615611277589,
+      "mean_trial_spatial_r_roi": 0.5500024132557008
+    },
+    {
+      "stimulus_id": "white_point_0.1",
+      "split": "test",
+      "spatial_split": "test",
+      "n_trials": 152,
+      "n_trials_spatial": 22,
+      "n_conditions": 7,
+      "n_conditions_spatial": 1,
+      "split_counts": {
+        "test": 22
+      },
+      "n_roi_pixels": 750,
+      "mean_pixel_r_disk": 0.2791207432746887,
+      "mean_pixel_r_roi": 0.5254458785057068,
+      "mean_trial_spatial_r_disk": 0.3720261409810768,
+      "mean_trial_spatial_r_roi": 0.46099669521655423
+    }
+  ],
+  "aggregate": {
+    "n_stimuli_pixel_r": 6,
+    "n_stimuli_spatial_r": 6,
+    "n_stimuli": 6,
+    "n_test_trials_pixel_r": 152,
+    "n_test_conditions_pixel_r": 7,
+    "mean_pixel_r_disk": 0.2791207432746887,
+    "mean_pixel_r_roi": 0.47658442457516986,
+    "mean_trial_spatial_r_disk": 0.28742860225640565,
+    "mean_trial_spatial_r_roi": 0.44603542872698326
+  },
+  "notes": [
+    "mean_pixel_r = mean of per-pixel Pearson r across ALL test-split trials (stage-04), then averaged inside disk / each ROI mask.",
+    "Do not compute pixel-r within a single condition or identical-feature stimulus subset (recon constant \u2192 NaN).",
+    "mean_trial_spatial_r = mean over that stimulus's trials of spatial Pearson r inside the mask (preferred dual metric when pixel-r is undefined in LOO identical-feature folds).",
+    "Disk pixel-r is identical across stimulus rows (one global map). ROI pixel-r is that same map averaged inside each ROI.",
+    "Spatial-r rows that fall back to train are optimistic relative to held-out eval."
+  ]
+}

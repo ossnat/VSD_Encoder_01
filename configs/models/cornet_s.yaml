@@ -1,0 +1,15 @@
+type: cornet
+name: cornet_s
+pretrained: true
+preprocess: imagenet_rgb
+
+# Cortical-area tap. Choices: V1, V1_pool7, V1_pool14, V2, V4, IT, avgpool
+# V1 without pooling is very large for Ridge; prefer V1_pool7 / V1_pool14.
+feature_layer: V4
+
+input_size: 224
+input_channels: 3
+input_scaling: none
+imagenet_normalize: true
+
+batch_size: 8

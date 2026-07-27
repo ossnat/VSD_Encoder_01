@@ -1,0 +1,58 @@
+stimulus_id: white_filled_circle_0.3
+x0: 18
+y0: 17
+width: 50
+height: 35
+status: accepted
+method: stim_minus_global_common
+n_stim_trials: 164
+n_common_trials: 1542
+n_sessions: 7
+roi:
+  x0: 18
+  y0: 17
+  width: 50
+  height: 35
+  row_start: 17
+  row_end: 52
+  col_start: 18
+  col_end: 68
+proposal_notes: 'Manual ROI fix 2026-07-23 (user review, lower top edge 5px): x0=18,
+  y0=17, w=50, h=35 (was 18,12,50x40). Bottom stays at 52. Preserved in PRESERVED_OVERRIDE.'
+method_policy: "global_common = trial-weighted grand mean of ALL non-blank trials\
+  \ across ALL sessions. residual = stim_mean \u2212 global_common (auto box placement\
+  \ only). Review figure shows the stimulus mean with the box."
+monkey: gandalf
+dates_conditions:
+- date: 130618c
+  condition: condAN1
+- date: 130618c
+  condition: condAN2
+- date: 130618c
+  condition: condAN3
+- date: 130618c
+  condition: condAN4
+- date: 130618c
+  condition: condAN5
+- date: 130618c
+  condition: condAN7
+- date: 290518a
+  condition: condAN2
+session_details:
+- date: 130618c
+  n_stim_trials: 141
+  n_global_common_trials: 1542
+  common_scope: global_all_trials_all_sessions
+- date: 290518a
+  n_stim_trials: 23
+  n_global_common_trials: 1542
+  common_scope: global_all_trials_all_sessions
+shape_type: filled_circle
+color: white
+size_deg: 0.3
+letter: null
+stimulus_text_example: 'cond1: Contrast curve - White filled circle rgb=(249,249,249)'
+common_scope: global_all_trials_all_sessions
+figure: experiments/loo_encoding/roi_review/figures/white_filled_circle_0.3__mean_map_roi.png
+mask_npy: experiments/loo_encoding/roi_review/rois/white_filled_circle_0.3__mask.npy
+colormap: mapgeog

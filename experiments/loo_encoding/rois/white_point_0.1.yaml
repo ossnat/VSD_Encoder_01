@@ -1,0 +1,10 @@
+stimulus_id: white_point_0.1
+x0: 32
+y0: 32
+width: 30
+height: 25
+status: accepted
+map_shape:
+- 100
+- 100
+mask_npy: white_point_0.1__mask.npy

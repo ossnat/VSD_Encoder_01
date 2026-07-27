@@ -1,0 +1,54 @@
+stimulus_id: letter_G_white_1
+x0: 10
+y0: 25
+width: 85
+height: 60
+status: accepted
+method: stim_minus_global_common
+n_stim_trials: 42
+n_common_trials: 1542
+n_sessions: 3
+roi:
+  x0: 10
+  y0: 25
+  width: 85
+  height: 60
+  row_start: 25
+  row_end: 85
+  col_start: 10
+  col_end: 95
+proposal_notes: 'Manual ROI stretch 2026-07-23: x0=10, y0=25, w=85, h=60 (was 10,30,80x55).
+  Up + right; left/bottom unchanged. Preserved in PRESERVED_OVERRIDE.'
+method_policy: "global_common = trial-weighted grand mean of ALL non-blank trials\
+  \ across ALL sessions. residual = stim_mean \u2212 global_common (auto box placement\
+  \ only). Review figure shows the stimulus mean with the box."
+monkey: gandalf
+dates_conditions:
+- date: 201118a
+  condition: condAN1
+- date: 201118c
+  condition: condAN1
+- date: 201118d
+  condition: condAN1
+session_details:
+- date: 201118a
+  n_stim_trials: 19
+  n_global_common_trials: 1542
+  common_scope: global_all_trials_all_sessions
+- date: 201118c
+  n_stim_trials: 5
+  n_global_common_trials: 1542
+  common_scope: global_all_trials_all_sessions
+- date: 201118d
+  n_stim_trials: 18
+  n_global_common_trials: 1542
+  common_scope: global_all_trials_all_sessions
+shape_type: letter
+color: white
+size_deg: 1.0
+letter: G
+stimulus_text_example: 'cond1: letter G'
+common_scope: global_all_trials_all_sessions
+figure: experiments/loo_encoding/roi_review/figures/letter_G_white_1__mean_map_roi.png
+mask_npy: experiments/loo_encoding/roi_review/rois/letter_G_white_1__mask.npy
+colormap: mapgeog

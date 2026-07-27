@@ -1,0 +1,20 @@
+# Held-out stimulus identities for LOO protocols A and B (same list).
+# Missing IDs are skipped at fold-build time.
+#
+# Start set (locked):
+#   - white_point_0.1
+#   - triangles (each identity separate)
+#   - vertical bars
+#   - letters one-at-a-time
+
+heldout_stimulus_ids:
+  - white_point_0.1
+  - black_triangle_contour_0.4
+  - black_bar_vertical_0.3
+  - black_bar_vertical_1
+  - letter_A_white_1
+  - letter_D_white_1
+  - letter_F_white_1
+  - letter_G_white_1
+  - letter_L_white_1
+  - letter_N_white_1

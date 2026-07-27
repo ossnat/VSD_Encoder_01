@@ -6,6 +6,7 @@ from typing import Any
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torchvision.models import (
     ResNet18_Weights,
     ResNet34_Weights,
@@ -17,14 +18,20 @@ from torchvision.models import (
     vgg16,
 )
 
+from src.DL_features.cornet_s import (
+    CORNET_FEATURE_LAYERS,
+    DEFAULT_CORNET_FEATURE_LAYER,
+    CORnetFeatureExtractor,
+    load_cornet_s,
+)
 from src.DL_features.gabor_gwp import build_gabor_gwp_extractor
 
 # Activation maps after each ResNet stage (post-ReLU block output).
 FEATURE_LAYERS: tuple[str, ...] = ("layer1", "layer2", "layer3", "layer4", "avgpool")
 DEFAULT_FEATURE_LAYER = "layer3"
 
-# VGG16 taps: after each stage MaxPool (maps are post-ReLU of the last conv in that block).
-VGG_FEATURE_LAYERS: tuple[str, ...] = (
+# VGG16 base taps: after each stage MaxPool (post-ReLU of last conv in that block).
+VGG_BASE_LAYERS: tuple[str, ...] = (
     "block1",
     "block2",
     "block3",
@@ -32,6 +39,15 @@ VGG_FEATURE_LAYERS: tuple[str, ...] = (
     "block5",
     "avgpool",
 )
+# Early blocks are too large for Ridge; use adaptive avg-pool mega-pixels like CORnet V1.
+VGG_POOLED_LAYERS: tuple[str, ...] = (
+    "block1_pool7",
+    "block1_pool14",
+    "block2_pool7",
+    "block2_pool14",
+    "block3_pool14",
+)
+VGG_FEATURE_LAYERS: tuple[str, ...] = VGG_BASE_LAYERS + VGG_POOLED_LAYERS
 # Index of the MaxPool ending each VGG16 features stage.
 _VGG16_BLOCK_CUTS: dict[str, int] = {
     "block1": 4,
@@ -41,6 +57,29 @@ _VGG16_BLOCK_CUTS: dict[str, int] = {
     "block5": 30,
 }
 DEFAULT_VGG_FEATURE_LAYER = "block4"
+
+
+def parse_vgg_feature_layer(feature_layer: str) -> tuple[str, int | None]:
+    """
+    Parse ``blockN``, ``avgpool``, or ``blockN_pool{M}``.
+
+    Returns (base_layer, pool_size_or_None).
+    """
+    layer = str(feature_layer).strip()
+    if layer in VGG_BASE_LAYERS:
+        return layer, None
+    if "_pool" in layer:
+        base, size_str = layer.rsplit("_pool", 1)
+        if base not in _VGG16_BLOCK_CUTS or not size_str.isdigit():
+            raise ValueError(
+                f"Unsupported VGG feature_layer={feature_layer!r}. "
+                f"Use block1_pool7 / block2_pool14 style names."
+            )
+        return base, int(size_str)
+    raise ValueError(
+        f"Unsupported VGG feature_layer={feature_layer!r}. "
+        f"Choose from: {', '.join(VGG_FEATURE_LAYERS)}"
+    )
 
 
 class ResNetFeatureExtractor(nn.Module):
@@ -95,25 +134,28 @@ class VGGFeatureExtractor(nn.Module):
 
     def __init__(self, backbone: nn.Module, feature_layer: str) -> None:
         super().__init__()
-        if feature_layer not in VGG_FEATURE_LAYERS:
-            raise ValueError(
-                f"Unsupported VGG feature_layer={feature_layer!r}. "
-                f"Choose from: {', '.join(VGG_FEATURE_LAYERS)}"
-            )
+        base, pool_size = parse_vgg_feature_layer(feature_layer)
         self.feature_layer = feature_layer
+        self.base_layer = base
+        self.pool_size = pool_size
         self.features = backbone.features
         self.avgpool = backbone.avgpool
 
+    def _maybe_pool(self, x: torch.Tensor) -> torch.Tensor:
+        if self.pool_size is None:
+            return x
+        return F.adaptive_avg_pool2d(x, (self.pool_size, self.pool_size))
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.feature_layer == "avgpool":
+        if self.base_layer == "avgpool":
             x = self.features(x)
             return self.avgpool(x)
 
-        cut = _VGG16_BLOCK_CUTS[self.feature_layer]
+        cut = _VGG16_BLOCK_CUTS[self.base_layer]
         for i, layer in enumerate(self.features):
             x = layer(x)
             if i == cut:
-                return x
+                return self._maybe_pool(x)
         raise RuntimeError(f"VGG cut index {cut} not reached")
 
 
@@ -146,6 +188,8 @@ def feature_layers_for_type(backbone_type: str) -> tuple[str, ...]:
         return FEATURE_LAYERS
     if key == "vgg":
         return VGG_FEATURE_LAYERS
+    if key == "cornet":
+        return CORNET_FEATURE_LAYERS
     if key == "gabor_gwp":
         return ("energy",)
     raise ValueError(f"Unsupported backbone type: {backbone_type!r}")
@@ -158,6 +202,8 @@ def _resolve_feature_layer(model_cfg: dict[str, Any]) -> str:
         return "energy"
     if backbone_type == "vgg":
         return str(layer or DEFAULT_VGG_FEATURE_LAYER)
+    if backbone_type == "cornet":
+        return str(layer or DEFAULT_CORNET_FEATURE_LAYER)
     return str(layer or DEFAULT_FEATURE_LAYER)
 
 
@@ -197,6 +243,13 @@ def build_feature_extractor(
         pt = bool(model_cfg.get("pretrained", True))
         backbone = _load_vgg(name, pt)
         model = VGGFeatureExtractor(backbone, feature_layer=layer)
+    elif backbone_type == "cornet":
+        name = str(model_cfg.get("name", "cornet_s")).lower()
+        if name not in {"cornet_s", "cornets", "s"}:
+            raise ValueError(f"Unsupported CORnet backbone: {name!r} (only cornet_s)")
+        pt = bool(model_cfg.get("pretrained", True))
+        backbone = load_cornet_s(pretrained=pt)
+        model = CORnetFeatureExtractor(backbone, feature_layer=layer)
     elif backbone_type == "gabor_gwp":
         model = build_gabor_gwp_extractor(model_cfg)
     else:

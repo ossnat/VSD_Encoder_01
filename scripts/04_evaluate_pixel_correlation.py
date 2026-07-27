@@ -13,10 +13,14 @@ import pandas as pd
 import yaml
 
 from src.DL_features.schema import model_slug
-from src.encoding.ridge import attach_feature_paths
+from src.encoding.ridge import attach_feature_paths, build_xy, predict_maps
 from src.encoding.schema import encoding_pairs_manifest_path, ridge_output_dir
+from src.evaluation.dual_metrics import dual_metrics_by_stimulus
 from src.evaluation.mask import mask_from_eval_cfg
-from src.evaluation.pixel_correlation import evaluate_pixel_correlation
+from src.evaluation.pixel_correlation import (
+    evaluate_pixel_correlation,
+    load_trial_mean_maps,
+)
 from src.evaluation.plotting import (
     plot_condition_mean_originals,
     plot_pixel_correlation_heatmap,
@@ -24,6 +28,7 @@ from src.evaluation.plotting import (
     plot_pixel_r2_heatmap,
 )
 from src.paths import project_root, resolve_data_path, workspace_root
+from src.stimuli.identity import attach_stimulus_ids
 
 
 def _load_yaml(path: Path) -> dict:
@@ -54,6 +59,7 @@ def evaluate_pixel_correlation_run(
     repo: Path | None = None,
     split: str = "test",
     feature_layer: str | None = None,
+    dual_roi: bool = True,
 ) -> dict:
     repo = repo or project_root()
     monkey = cfg["monkey"]
@@ -190,6 +196,53 @@ def evaluate_pixel_correlation_run(
         ),
     )
 
+    dual_csv_rel: str | None = None
+    if dual_roi:
+        # Recompute trial stacks once for per-stimulus disk vs ROI dual report.
+        eval_df_ids = attach_stimulus_ids(eval_df.reset_index(drop=True))
+        originals = load_trial_mean_maps(
+            eval_df_ids,
+            repo=repo,
+            spatial_size=spatial_size,
+            start_frame=start_frame,
+            end_frame=end_frame,
+            avg_method=avg_method,
+        )
+        x_eval, _ = build_xy(eval_df_ids, repo=repo, spatial_size=spatial_size)
+        recons = predict_maps(result, x_eval, spatial_size)
+        dual_df = dual_metrics_by_stimulus(
+            eval_df_ids,
+            originals,
+            recons,
+            disk_mask=eval_mask,
+            repo=repo,
+            spatial_size=spatial_size,
+            disk_radius=mask_radius,
+        )
+        dual_csv = plot_dir / f"dual_disk_vs_roi_{split}.csv"
+        dual_df.to_csv(dual_csv, index=False)
+        dual_csv_rel = str(dual_csv.relative_to(repo))
+        if not dual_df.empty:
+            print(
+                f"Dual disk vs ROI ({split}): wrote {dual_csv_rel} "
+                f"({len(dual_df)} stimuli)"
+            )
+            show = dual_df[
+                [
+                    c
+                    for c in (
+                        "stimulus_id",
+                        "n_trials",
+                        "mean_r_disk",
+                        "mean_r_roi",
+                        "mean_trial_spatial_r_disk",
+                        "mean_trial_spatial_r_roi",
+                    )
+                    if c in dual_df.columns
+                ]
+            ]
+            print(show.to_string(index=False))
+
     run_cfg = {
         "monkey": monkey,
         "window_id": window_id,
@@ -207,6 +260,7 @@ def evaluate_pixel_correlation_run(
             "pixel_mean_maps": str(mean_maps_path.relative_to(repo)),
             "condition_mean_originals": str(cond_mean_path.relative_to(repo)),
         },
+        "dual_disk_vs_roi_csv": dual_csv_rel,
         "created": datetime.now(timezone.utc).isoformat(),
     }
     with (plot_dir / f"pixel_evaluation_{split}.json").open("w") as f:
@@ -264,6 +318,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--monkey", type=str, default=None)
     parser.add_argument("--split", type=str, default="test")
+    parser.add_argument(
+        "--dual-roi",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Also write per-stimulus disk vs ROI dual metrics CSV (default: on)",
+    )
     return parser.parse_args(argv)
 
 
@@ -277,6 +337,7 @@ def main(argv: list[str] | None = None) -> int:
         model_cfg_path=args.model,
         split=args.split,
         feature_layer=args.feature_layer,
+        dual_roi=bool(args.dual_roi),
     )
     return 0
 

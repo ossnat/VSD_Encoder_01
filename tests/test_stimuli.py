@@ -3,6 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
+from PIL import Image, ImageDraw
 
 from src.stimuli.catalog import (
     condition_label,
@@ -13,6 +14,7 @@ from src.stimuli.catalog import (
 from src.stimuli.render import (
     RenderConfig,
     _deg_point_to_px,
+    _draw_triangle_contour,
     _size_to_radius_px,
     render_stimulus,
 )
@@ -211,3 +213,35 @@ def test_render_stimulus_shape():
     image = render_stimulus(spec, RenderConfig())
     assert image.shape == (224, 224, 3)
     assert image.dtype == np.uint8
+
+
+def test_triangle_contour_tip_points_right():
+    """Equilateral triangle tip should point right (+x), not up."""
+    cfg = RenderConfig(canvas_size=224, pixels_per_deg=224.0 / 6.0)
+    spec = parse_stimulus_rows(
+        pd.DataFrame(
+            [
+                {
+                    "Monkey": "Gandalf",
+                    "Date": "10/7/2018",
+                    "Session": "a",
+                    "cortex file": "gan_2018_07_10a.1",
+                    "stimulus (need to check r/d)": "cond3: black triangle contour 0.4 radius",
+                    "Stimulus Position": "(0.6,-0.75)",
+                }
+            ]
+        ),
+        monkey="gandalf",
+    )[0]
+    img = Image.new("RGB", (cfg.canvas_size, cfg.canvas_size), color=(128, 128, 128))
+    draw = ImageDraw.Draw(img)
+    _draw_triangle_contour(draw, spec, cfg)
+    arr = np.asarray(img)
+    dark = arr[:, :, 0] < 64
+    ys, xs = np.where(dark)
+    x_px, y_px = _deg_point_to_px(spec.pos_x_deg, spec.pos_y_deg, cfg)
+    radius_px = _size_to_radius_px(spec.size_deg, cfg)
+    # Tip at 0° sits at center_x + radius; left vertices are left of center.
+    assert float(xs.max()) == pytest.approx(x_px + radius_px, abs=2.0)
+    assert float(xs.min()) < x_px - radius_px * 0.3
+    assert float(ys.mean()) == pytest.approx(y_px, abs=2.0)

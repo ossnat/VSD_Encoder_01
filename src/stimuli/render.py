@@ -113,8 +113,9 @@ def _draw_triangle_contour(
     x_px, y_px = _deg_point_to_px(spec.pos_x_deg, spec.pos_y_deg, cfg)
     radius_px = _size_to_radius_px(spec.size_deg, cfg)
     # Equilateral triangle inscribed in circle of radius radius_px.
+    # Tip points right (0°); upper and lower vertices at 120° and 240°.
     pts: list[tuple[float, float]] = []
-    for angle_deg in (90, 210, 330):
+    for angle_deg in (0, 120, 240):
         rad = math.radians(angle_deg)
         pts.append((x_px + radius_px * math.cos(rad), y_px - radius_px * math.sin(rad)))
     outline = _color_rgb(spec)
@@ -157,7 +158,6 @@ def _render_letter_on_quadrant(spec: StimulusSpec, cfg: RenderConfig) -> np.ndar
 
     if path.suffix.lower() == ".bmp":
         rgb = np.asarray(Image.open(path).convert("RGB"), dtype=np.uint8)
-        bg_rgb = tuple(int(x) for x in rgb[0, 0])
         mask = np.any(rgb != rgb[0, 0], axis=2)
         if not mask.any():
             raise ValueError(f"No letter pixels found in {path}")
@@ -174,28 +174,11 @@ def _render_letter_on_quadrant(spec: StimulusSpec, cfg: RenderConfig) -> np.ndar
         letter_u8 = np.clip(np.rint(letter * 255.0), 0, 255).astype(np.uint8)
         glyph = np.stack([letter_u8, letter_u8, letter_u8], axis=-1)
         glyph_mask = letter_u8 > 0
-        bg_rgb = (
-            int(spec.background_gray),
-            int(spec.background_gray),
-            int(spec.background_gray),
-        ) if spec.background_gray is not None else (
-            cfg.background_gray,
-            cfg.background_gray,
-            cfg.background_gray,
-        )
 
-    canvas_bg = (
-        int(spec.background_gray)
-        if spec.background_gray is not None
-        and not (
-            isinstance(spec.background_gray, float) and math.isnan(spec.background_gray)
-        )
-        else int(bg_rgb[0])
-    )
     img = Image.new(
         "RGB",
         (cfg.canvas_size, cfg.canvas_size),
-        color=(canvas_bg, canvas_bg, canvas_bg),
+        color=(cfg.background_gray, cfg.background_gray, cfg.background_gray),
     )
 
     # Diameter of the 1° letter circle → longest glyph side fits that diameter.
@@ -223,17 +206,10 @@ def render_stimulus(spec: StimulusSpec, cfg: RenderConfig | None = None) -> np.n
     Render one stimulus as RGB uint8 array with shape (H, W, 3).
     """
     cfg = cfg or RenderConfig()
-    bg = (
-        int(spec.background_gray)
-        if spec.background_gray is not None and not (
-            isinstance(spec.background_gray, float) and math.isnan(spec.background_gray)
-        )
-        else cfg.background_gray
-    )
     img = Image.new(
         "RGB",
         (cfg.canvas_size, cfg.canvas_size),
-        color=(bg, bg, bg),
+        color=(cfg.background_gray, cfg.background_gray, cfg.background_gray),
     )
     draw = ImageDraw.Draw(img)
 

@@ -12,6 +12,7 @@ from src.stimuli.catalog import (
     condition_label,
     h5_session_id,
 )
+from src.stimuli.exclusions import is_excluded_letter_session
 
 CONTRAST_LETTERS_GLOB = "ContrastCurve_Letters_*_ExpSummary.csv"
 
@@ -235,13 +236,14 @@ def parse_contrast_letters_rows(
         if "contrast curve" in paradigm.lower():
             diameter_deg = _parse_filled_circle_radius_deg(str(size_raw))
             polarity = "white" if "white" in paradigm.lower() else "black"
-            # Background from Blank cell when present (screen mean luminance).
             blank_cell = row.get("Cond6")
-            bg = 128
+            # Session Blank RGB drives contrast-polarity checks only; rendered
+            # canvas background is always the canonical gray (128).
+            polarity_bg = 128
             if blank_cell is not None and pd.notna(blank_cell):
                 kind, gray = _parse_contrast_cell(str(blank_cell))
                 if kind == "blank" and gray is not None:
-                    bg = gray
+                    polarity_bg = gray
 
             # Cond1 anchors polarity when a later cell lists the opposite RGB.
             anchor: int | None = None
@@ -265,7 +267,7 @@ def parse_contrast_letters_rows(
                     continue
                 assert gray is not None
                 gray = _enforce_contrast_polarity(
-                    gray, polarity=polarity, background=bg, anchor=anchor
+                    gray, polarity=polarity, background=polarity_bg, anchor=anchor
                 )
                 rgb = (gray, gray, gray)
                 stim_text = (
@@ -291,12 +293,14 @@ def parse_contrast_letters_rows(
                         rgb=rgb,
                         letter=None,
                         source_path=None,
-                        background_gray=bg,
+                        background_gray=128,
                     )
                 )
             continue
 
         if "letter" in paradigm.lower():
+            if is_excluded_letter_session(h5):
+                continue
             letter_size = _parse_letter_size_deg(str(size_raw))
             for cond_num in range(1, 9):
                 col = f"Cond{cond_num}"
@@ -337,7 +341,7 @@ def parse_contrast_letters_rows(
                         rgb=None,
                         letter=letter,
                         source_path=str(mat_path),
-                        background_gray=None,
+                        background_gray=128,
                     )
                 )
             continue

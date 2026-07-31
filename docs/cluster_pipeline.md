@@ -201,6 +201,19 @@ MONKEY=gandalf DEVICE=cuda OVERWRITE=1 bash scripts/submit_encoding_jobs.sh
 sbatch slurm/run_encoding_heavy.slurm
 ```
 
+On the DSI cluster (`generic` partition, one GPU), first create the log
+directory and then submit the site-specific wrapper:
+
+```bash
+cd /home/dsi/ossnat/VSD_FM/VSD_Encoder_01
+mkdir -p slurm_err_out
+sbatch slurm/run_encoding_heavy_generic.slurm
+```
+
+That wrapper is self-contained (stages 02b + 03 in one allocation). Do not run
+`submit_encoding_jobs.sh` from inside an `sbatch` wrapper: that script is a
+login-node submission helper and would create nested jobs.
+
 ### Option C — submit jobs individually
 
 ```bash
@@ -322,4 +335,6 @@ See [`backbone_layer_sweep.md`](backbone_layer_sweep.md) for local commands, res
 - `docs/DL_feature_extraction.md` — CNN features
 - `docs/ridge_encoding.md` — RidgeCV model
 - `docs/backbone_layer_sweep.md` — ResNet/VGG layer sweeps + PDF report
+- `docs/cornet_s.md` — CORnet-S V1/V2/V4 comparison + V1 pooling
+- `docs/vgg16.md` — VGG16 early-block pooling + vs ResNet/CORnet reports
 - `docs/DATA_LAYOUT.md` — H5 / split file layout

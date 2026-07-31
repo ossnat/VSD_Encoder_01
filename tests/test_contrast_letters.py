@@ -95,8 +95,8 @@ def test_parse_contrast_and_letters(tmp_path: Path):
         ]
     )
     specs = parse_contrast_letters_rows(df, monkey="gandalf", letters_root=letters)
-    # 6 contrast (skip blank+error) + 6 letters (skip blank+error); no control attention
-    assert len(specs) == 12
+    # 6 contrast (skip blank+error); 201118a letters excluded (bad frames).
+    assert len(specs) == 6
 
     contrast = [s for s in specs if s.h5_session == "230518b"]
     assert len(contrast) == 6
@@ -104,7 +104,7 @@ def test_parse_contrast_and_letters(tmp_path: Path):
     assert contrast[0].pos_x_deg == pytest.approx(0.6)
     assert contrast[0].pos_y_deg == pytest.approx(-0.75)
     assert contrast[0].size_deg == pytest.approx(0.8)  # r=0.4 → diameter
-    assert contrast[0].background_gray == 186
+    assert contrast[0].background_gray == 128
     assert {s.condition for s in contrast} == {
         "condAN1",
         "condAN2",
@@ -116,31 +116,12 @@ def test_parse_contrast_and_letters(tmp_path: Path):
     assert all(s.rgb is not None and s.rgb[0] >= 186 for s in contrast)
 
     letters_specs = [s for s in specs if s.h5_session == "201118a"]
-    assert len(letters_specs) == 6
-    assert {s.letter for s in letters_specs} == {"G", "A", "N", "D", "F", "L"}
-    assert all(s.shape_type == "letter" for s in letters_specs)
-    # Catalog (-0.9, +1) → swapped (1.0, -0.9); size is 1° letter-circle diameter.
-    assert letters_specs[0].pos_x_deg == pytest.approx(1.0)
-    assert letters_specs[0].pos_y_deg == pytest.approx(-0.9)
-    assert letters_specs[0].size_deg == pytest.approx(1.0)
+    assert len(letters_specs) == 0
 
     image = render_stimulus(contrast[0], RenderConfig())
     assert image.shape == (224, 224, 3)
     assert image.dtype == np.uint8
-    # Background should be blank level 186.
-    assert image[0, 0, 0] == 186
+    # Canonical background gray 128 (session blank 186 used only for polarity).
+    assert image[0, 0, 0] == 128
     # Target pixel near expected location should be near 249.
     assert (image == 249).any()
-
-    letter_img = render_stimulus(letters_specs[0], RenderConfig())
-    assert letter_img.shape == (224, 224, 3)
-    assert letter_img.dtype == np.uint8
-    # BMP letters: black glyph on ~188 gray, centered at catalog location.
-    assert letter_img[0, 0, 0] == 188
-    assert (letter_img == 0).any()
-    assert str(letters_specs[0].source_path).endswith(".bmp")
-    dark = np.where(letter_img[:, :, 0] < 100)
-    cy, cx = float(dark[0].mean()), float(dark[1].mean())
-    # (1.0°, -0.9°) → ~37.3 px, ~33.6 px at 224/6.
-    assert cx == pytest.approx(1.0 * 224 / 6, abs=8)
-    assert cy == pytest.approx(0.9 * 224 / 6, abs=8)

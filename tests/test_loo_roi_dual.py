@@ -13,6 +13,7 @@ from src.loo.folds import (
     audit_protocol_b_leakage,
     build_protocol_a_folds,
     build_protocol_b_folds,
+    select_one_fold_per_stimulus,
 )
 from src.paths import project_root
 from src.stimuli.identity import stimulus_id_from_row
@@ -134,3 +135,19 @@ def test_protocol_a_condition_holdout_allows_other_sessions():
     assert "same stimulus_id" in note
     rem = fold_df[fold_df["loo_split"].isin(["train", "val"])]
     assert (rem["stimulus_id"] == "white_point_0.1").any()
+
+
+def test_select_one_fold_per_stimulus_reproducible():
+    pairs = _toy_pairs()
+    folds = build_protocol_a_folds(
+        pairs, ["white_point_0.1", "black_point_0.1"]
+    )
+    assert len(folds) == 3  # white: 2 sessions, black: 1
+    a = select_one_fold_per_stimulus(folds, seed=17)
+    b = select_one_fold_per_stimulus(folds, seed=17)
+    assert len(a) == 2
+    assert {s.heldout_stimulus_id for s, _ in a} == {
+        "white_point_0.1",
+        "black_point_0.1",
+    }
+    assert [s.fold_id for s, _ in a] == [s.fold_id for s, _ in b]

@@ -10,6 +10,7 @@ from src.data.splits import load_trial_table
 from src.data.xarray_schema import trial_output_path, window_id_from_frames
 from src.encoding.schema import encoding_pairs_manifest_path
 from src.paths import resolve_data_path
+from src.stimuli.exclusions import is_excluded_encoding_trial
 from src.stimuli.schema import manifest_path as stimulus_manifest_path
 
 
@@ -114,6 +115,23 @@ def build_encoding_pairs(
             for row in uncovered.itertuples(index=False):
                 print(f"  {row.date} {row.condition} ({row.n_trials} trials)")
         pairs = merged
+
+    if "shape_type" in pairs.columns:
+        exclude_mask = pairs.apply(
+            lambda r: is_excluded_encoding_trial(
+                str(r["date"]), str(r["condition"]), shape_type=str(r["shape_type"])
+            ),
+            axis=1,
+        )
+    else:
+        exclude_mask = pairs["date"].astype(str).isin({"201118a"})
+    n_excluded = int(exclude_mask.sum())
+    if n_excluded:
+        print(
+            f"Excluded {n_excluded} trials from bad letter session(s) "
+            f"(e.g. 201118a; see src/stimuli/exclusions.py)"
+        )
+        pairs = pairs.loc[~exclude_mask].reset_index(drop=True)
 
     nc_paths: list[str] = []
     nc_exists: list[bool] = []

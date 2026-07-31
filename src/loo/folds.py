@@ -217,6 +217,36 @@ def build_protocol_a_folds(
     return folds
 
 
+def select_one_fold_per_stimulus(
+    folds: list[tuple[FoldSpec, pd.DataFrame]],
+    *,
+    seed: int = 17,
+) -> list[tuple[FoldSpec, pd.DataFrame]]:
+    """
+    Keep exactly one fold per ``heldout_stimulus_id``.
+
+    Within each stimulus, candidates are sorted by ``fold_id`` then one index
+    is drawn with ``numpy.random.default_rng(seed)`` so the choice is
+    reproducible (document the seed alongside results).
+    """
+    by_sid: dict[str, list[tuple[FoldSpec, pd.DataFrame]]] = {}
+    order: list[str] = []
+    for item in folds:
+        sid = item[0].heldout_stimulus_id
+        if sid not in by_sid:
+            by_sid[sid] = []
+            order.append(sid)
+        by_sid[sid].append(item)
+
+    rng = np.random.default_rng(seed)
+    selected: list[tuple[FoldSpec, pd.DataFrame]] = []
+    for sid in order:
+        candidates = sorted(by_sid[sid], key=lambda x: x[0].fold_id)
+        idx = int(rng.integers(0, len(candidates)))
+        selected.append(candidates[idx])
+    return selected
+
+
 def build_protocol_b_folds(
     pairs: pd.DataFrame,
     heldout_ids: list[str],

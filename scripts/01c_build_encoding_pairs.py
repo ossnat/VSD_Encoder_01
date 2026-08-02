@@ -8,6 +8,7 @@ from pathlib import Path
 
 import yaml
 
+from src.data.averaging import resolve_normalization
 from src.data.xarray_schema import window_id_from_frames
 from src.encoding.pairs import build_encoding_pairs
 from src.paths import project_root, resolve_data_path, workspace_root
@@ -87,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
         encoding_pairs_root=encoding_pairs_root,
         repo=repo,
         avg_method=cfg.get("avg_method", "mean"),
-        normalization=cfg.get("normalization", "none"),
+        normalization=resolve_normalization(cfg.get("normalization", "none")),
         require_nc=args.require_nc,
         portable_path=lambda p: _portable_path(p, repo),
     )

@@ -93,4 +93,4 @@ scripts/py experiments/box_polygon/refine_box_to_polygon.py \
 ## Related
 
 - Box source: `experiments/loo_encoding/roi_review/`
-- Reliability helpers: `experiments/noise_ceiling_roi/compute_noise_ceiling_rois.py`
+- Reliability helpers: `experiments/noise_ceiling_roi/nc_roi_utils.py` (across-condition NC ROI)

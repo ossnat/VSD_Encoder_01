@@ -115,13 +115,16 @@ def dual_mask_metrics_for_stimulus(
     repo,
     spatial_size: tuple[int, int] = (100, 100),
     disk_radius: int | None = None,
+    roi_dir=None,
 ) -> dict[str, Any]:
     """Dual metrics for one held-out stimulus_id subset."""
     df = attach_stimulus_ids(eval_df.reset_index(drop=True))
     idx = np.where(df["stimulus_id"].to_numpy() == stimulus_id)[0]
     if idx.size == 0:
         raise ValueError(f"No trials for stimulus_id={stimulus_id!r}")
-    roi = load_roi_mask(stimulus_id, repo=repo, spatial_size=spatial_size)
+    roi = load_roi_mask(
+        stimulus_id, repo=repo, spatial_size=spatial_size, roi_dir=roi_dir
+    )
     metrics = dual_mask_metrics(
         originals[idx],
         reconstructions[idx],
@@ -146,6 +149,7 @@ def dual_metrics_by_stimulus(
     spatial_size: tuple[int, int] = (100, 100),
     disk_radius: int | None = None,
     stimulus_ids: list[str] | None = None,
+    roi_dir=None,
 ) -> pd.DataFrame:
     """
     Per-stimulus_id dual disk/ROI metrics for rows in ``eval_df``.
@@ -164,7 +168,9 @@ def dual_metrics_by_stimulus(
         if idx.size == 0:
             continue
         try:
-            roi = load_roi_mask(sid, repo=repo, spatial_size=spatial_size)
+            roi = load_roi_mask(
+                sid, repo=repo, spatial_size=spatial_size, roi_dir=roi_dir
+            )
         except FileNotFoundError:
             continue
         m = dual_mask_metrics(

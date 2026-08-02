@@ -20,3 +20,7 @@ evaluation:
   use_mask: true
   mask_type: circle
   mask_radius: 50
+
+# Training target spatial mask is selected at the LOO CLI, not here:
+#   --target-mask / --loss-roi none|disk|box_union|noise_ceiling_hull|roi|<path>
+#   (see experiments/loo_encoding/README.md; disk radius uses evaluation.mask_radius)

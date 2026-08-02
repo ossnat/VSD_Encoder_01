@@ -7,7 +7,7 @@ ROI review is **done**. Frozen boxes live in `rois/` (window-independent).
 | Item | Status |
 |------|--------|
 | 1. ROI freeze (`rois/`) | **done** |
-| 2. Window `[35, 43)` → `win_0035_0043` | **done** (config + averaged + encoding pairs). Full non-LOO ridge optional. |
+| 2. Window `[35, 43)` → `win_0035_0043` | **done** (config + averaged + encoding pairs). Full non-LOO ridge optional. **201118a letters excluded** (`src/stimuli/exclusions.py`). Z-score variant: `configs/windows/evoked_35_43_zscore.yaml` → `win_0035_0043_zscore`. |
 | 3. Stimulus taxonomy | **done** (`stimulus_taxonomy.yaml` / `.csv`) |
 | 4. ROI-mask + dual disk/ROI metrics | **done** (`src/evaluation/roi_mask.py`, `dual_metrics.py`, stage-04 `--dual-roi`, LOO runner) |
 | 5. LOO scaffolding (protocols A & B) | **done** (code + fold manifests + smoke folds) |
@@ -78,6 +78,69 @@ scripts/py experiments/loo_encoding/run_loo_encoding.py \
 # Protocol A (many folds: one per date/condition of each held-out stim; ~31)
 scripts/py experiments/loo_encoding/run_loo_encoding.py \
   --window configs/windows/evoked_35_43.yaml --protocol A
+```
+
+### Training target / loss ROI (`--target-mask` / `--loss-roi`)
+
+Ridge Y targets (MSE) can be restricted to a spatial mask. Both flag names are
+aliases; default is **`none`** (full-frame MSE). Resolution lives in
+`src/evaluation/loss_roi.py`.
+
+| Flag | Effect | Output dir |
+|------|--------|------------|
+| `--loss-roi none` (default) | Full FOV multi-output Ridge | `protocol_{A,B}/` |
+| `--loss-roi disk` (or `circular`) | MSE only inside centered circle (radius from `configs/ridge/default.yaml` → `evaluation.mask_radius`, usually 50) | `protocol_{A,B}_disk/` |
+| `--loss-roi box_union` | MSE inside `experiments/loo_encoding/roi_compare/union_of_boxes__mask.npy` | `protocol_{A,B}_box_union/` |
+| `--loss-roi noise_ceiling_hull` | MSE inside official global naive hull (across-condition thr=0.85 magenta; see path below); **errors clearly if file missing** | `protocol_{A,B}_noise_ceiling_hull/` |
+| `--loss-roi roi` | Fit only pixels in the held-out stimulus **box** from `--roi-dir` (default `rois/`) | `protocol_{A,B}_box_roi/` |
+| `--loss-roi path/to/mask.npy` (or `.yaml`) | Custom mask (polygon/ellipse/union) | `protocol_{A,B}_<mask_stem>/` (or `protocol_{A,B}_<run-tag>/`) |
+
+**Official path** for `noise_ceiling_hull` (naive / magenta hull; currently
+built on `win_0035_0046` raw — see `experiments/noise_ceiling_roi/`). The
+mask file is independent of the LOO `--window`: analysis uses its config;
+ROI creation uses NC ROI `--window`; LOO just loads the installed `.npy`:
+
+`experiments/noise_ceiling_roi/rois/global_noise_ceiling_hull__mask.npy`
+
+Predictions are scattered back to the full FOV for plotting (out-of-mask = NaN).
+Eval still reports dual **disk / ROI / full** spatial-r metrics (NaN pixels ignored),
+plus **train-mask** spatial-r when a target mask is set. Optional `--roi-dir` and `--run-tag`.
+
+```bash
+# Full-frame MSE (default; same as omitting the flag)
+scripts/py experiments/loo_encoding/run_loo_encoding.py \
+  --window configs/windows/evoked_35_46_zscore.yaml --protocol B \
+  --loss-roi none \
+  --stimuli black_triangle_contour_0.4 --force --no-save-model
+
+# Disk / circular (r=50 from ridge eval config)
+scripts/py experiments/loo_encoding/run_loo_encoding.py \
+  --window configs/windows/evoked_35_46_zscore.yaml --protocol B \
+  --loss-roi disk \
+  --stimuli black_triangle_contour_0.4 --force --no-save-model
+
+# Named union-of-boxes (no --run-tag needed)
+scripts/py experiments/loo_encoding/run_loo_encoding.py \
+  --window configs/windows/evoked_35_46_zscore.yaml --protocol B \
+  --loss-roi box_union \
+  --stimuli black_triangle_contour_0.4 black_bar_vertical_0.3 letter_D_white_1 \
+  --force --no-save-model
+# → runs/.../protocol_B_box_union/
+
+# Protocol B: train + score inside per-fold box ROI
+scripts/py experiments/loo_encoding/run_loo_encoding.py \
+  --window configs/windows/evoked_35_46_zscore.yaml --protocol B \
+  --target-mask roi \
+  --stimuli black_triangle_contour_0.4 black_bar_vertical_0.3 letter_D_white_1 \
+  --force --no-save-model
+
+# Equivalent custom path + run-tag (legacy style for box_union)
+scripts/py experiments/loo_encoding/run_loo_encoding.py \
+  --window configs/windows/evoked_35_46_zscore.yaml --protocol B \
+  --target-mask experiments/loo_encoding/roi_compare/union_of_boxes__mask.npy \
+  --run-tag box_union \
+  --stimuli black_triangle_contour_0.4 black_bar_vertical_0.3 letter_D_white_1 \
+  --force --no-save-model
 ```
 
 Outputs: `runs/win_0035_0043/resnet18_imagenet/layer3/protocol_{A,B}/<fold_id>/`

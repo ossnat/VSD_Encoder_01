@@ -54,7 +54,19 @@ plots/averaged/{monkey}/{window_id}/
 | `n_frames_averaged` | `end_frame - start_frame` |
 | `source_n_frames` | Original trial length (axis 1 of H5 array) |
 | `avg_method` | `mean` (default) |
-| `normalization` | `none` (default); future: `baseline_zscore`, etc. |
+| `normalization` | `none` / `raw` (default) or `baseline_zscore` / `zscore_baseline` |
+| `baseline_start_frame`, `baseline_end_frame` | Half-open baseline for z-score, default `[2, 26)` (frames 2..25) |
+| `baseline_std_eps` | Floor for per-pixel std (default `1e-8`) so zero-std pixels stay finite |
+
+### Baseline z-score (`normalization: baseline_zscore`)
+
+For each trial and pixel, mean and std are estimated on frames
+`[baseline_start_frame, baseline_end_frame)` (Python half-open indexing).
+Every frame is then transformed as `(x - mean) / max(std, eps)` before the
+analysis window `[start_frame, end_frame)` is averaged. Prefer dedicated
+window configs such as `configs/windows/evoked_35_43_zscore.yaml` so raw and
+z-scored averaged trees stay separate (`win_*_zscore`).
+
 | `split` | `train` \| `val` \| `test` from v3 split |
 | `created` | ISO timestamp when file was written |
 

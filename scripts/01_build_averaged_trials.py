@@ -10,7 +10,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-from src.data.averaging import average_frames
+from src.data.averaging import average_frames, resolve_normalization
 from src.data.h5_io import read_trial_by_global_id
 from src.data.plotting import plot_averaged_samples, select_sample_rows
 from src.data.splits import load_trial_table
@@ -61,7 +61,10 @@ def build_averaged_trials(
     start_frame = int(cfg["start_frame"])
     end_frame = int(cfg["end_frame"])
     avg_method = cfg.get("avg_method", "mean")
-    normalization = cfg.get("normalization", "none")
+    normalization = resolve_normalization(cfg.get("normalization", "none"))
+    baseline_start_frame = int(cfg.get("baseline_start_frame", 2))
+    baseline_end_frame = int(cfg.get("baseline_end_frame", 26))
+    baseline_std_eps = float(cfg.get("baseline_std_eps", 1e-8))
     window_id = cfg.get("window_id") or window_id_from_frames(
         start_frame, end_frame
     )
@@ -124,6 +127,9 @@ def build_averaged_trials(
                     "end_frame": end_frame,
                     "avg_method": avg_method,
                     "normalization": normalization,
+                    "baseline_start_frame": baseline_start_frame,
+                    "baseline_end_frame": baseline_end_frame,
+                    "baseline_std_eps": baseline_std_eps,
                     "nc_path": _portable_data_path(nc_path),
                 }
             )
@@ -137,6 +143,10 @@ def build_averaged_trials(
             end_frame,
             spatial_size=(height, width),
             method=avg_method,
+            normalization=normalization,
+            baseline_start_frame=baseline_start_frame,
+            baseline_end_frame=baseline_end_frame,
+            baseline_std_eps=baseline_std_eps,
         )
 
         da = build_averaged_dataarray(
@@ -156,6 +166,9 @@ def build_averaged_trials(
             avg_method=avg_method,
             normalization=normalization,
             split=str(row.split),
+            baseline_start_frame=baseline_start_frame,
+            baseline_end_frame=baseline_end_frame,
+            baseline_std_eps=baseline_std_eps,
         )
         save_averaged_trial(da, nc_path)
         n_written += 1
@@ -175,6 +188,9 @@ def build_averaged_trials(
             "end_frame": end_frame,
             "avg_method": avg_method,
             "normalization": normalization,
+            "baseline_start_frame": baseline_start_frame,
+            "baseline_end_frame": baseline_end_frame,
+            "baseline_std_eps": baseline_std_eps,
             "nc_path": _portable_data_path(nc_path),
         }
         manifest_rows.append(meta)
@@ -213,6 +229,12 @@ def build_averaged_trials(
 
     print(f"Monkey: {monkey}")
     print(f"Window: {window_id} [{start_frame}, {end_frame})")
+    print(f"Normalization: {normalization}")
+    if normalization == "baseline_zscore":
+        print(
+            f"Baseline z-score frames: [{baseline_start_frame}, "
+            f"{baseline_end_frame}) (eps={baseline_std_eps:g})"
+        )
     print(
         f"Trials processed: {len(trials)} "
         f"(written={n_written}, skipped_existing={n_skipped}, "

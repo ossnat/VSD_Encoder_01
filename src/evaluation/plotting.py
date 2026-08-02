@@ -21,7 +21,12 @@ def _shared_limits(images: list[np.ndarray]) -> tuple[float, float]:
     finite = vals[np.isfinite(vals)]
     if finite.size == 0:
         return 0.0, 1.0
-    return float(np.percentile(finite, 1)), float(np.percentile(finite, 99))
+    lo = float(np.percentile(finite, 1))
+    hi = float(np.percentile(finite, 99))
+    if lo == hi:
+        pad = abs(lo) * 0.05 if lo != 0 else 1e-6
+        return lo - pad, hi + pad
+    return lo, hi
 
 
 def plot_pixel_correlation_heatmap(

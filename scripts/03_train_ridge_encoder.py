@@ -75,6 +75,10 @@ def _load_h5_mean_frame(
     start_frame: int,
     end_frame: int,
     avg_method: str,
+    normalization: str = "none",
+    baseline_start_frame: int = 2,
+    baseline_end_frame: int = 26,
+    baseline_std_eps: float = 1e-8,
 ) -> np.ndarray:
     return load_h5_mean_frame(
         target_file=str(row.target_file),
@@ -84,6 +88,10 @@ def _load_h5_mean_frame(
         start_frame=start_frame,
         end_frame=end_frame,
         avg_method=avg_method,
+        normalization=normalization,
+        baseline_start_frame=baseline_start_frame,
+        baseline_end_frame=baseline_end_frame,
+        baseline_std_eps=baseline_std_eps,
     )
 
 
@@ -101,6 +109,12 @@ def train_ridge_encoder(
     end_frame = int(cfg["end_frame"])
     window_id = cfg.get("window_id") or f"win_{start_frame:04d}_{end_frame:04d}"
     avg_method = cfg.get("avg_method", "mean")
+    from src.data.averaging import resolve_normalization
+
+    normalization = resolve_normalization(cfg.get("normalization", "none"))
+    baseline_start_frame = int(cfg.get("baseline_start_frame", 2))
+    baseline_end_frame = int(cfg.get("baseline_end_frame", 26))
+    baseline_std_eps = float(cfg.get("baseline_std_eps", 1e-8))
     ridge_cfg = cfg["ridge"]
     eval_cfg = ridge_cfg.get("evaluation", {})
     eval_mask = mask_from_eval_cfg(eval_cfg, spatial_size)
@@ -273,6 +287,10 @@ def train_ridge_encoder(
             start_frame=start_frame,
             end_frame=end_frame,
             avg_method=avg_method,
+            normalization=normalization,
+            baseline_start_frame=baseline_start_frame,
+            baseline_end_frame=baseline_end_frame,
+            baseline_std_eps=baseline_std_eps,
         )
         meta_dict = row.to_dict()
         cond_key = f"{row['date']}__{row['condition']}"

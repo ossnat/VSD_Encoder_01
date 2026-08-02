@@ -54,10 +54,13 @@ def masked_pearson_r(
     y_pred: np.ndarray,
     mask: np.ndarray,
 ) -> float:
-    """Pearson r over flattened pixels where ``mask`` is True."""
+    """Pearson r over flattened pixels where ``mask`` is True (finite only)."""
     flat_mask = mask.ravel()
     a = y_true.ravel().astype(np.float64)[flat_mask]
     b = y_pred.ravel().astype(np.float64)[flat_mask]
+    finite = np.isfinite(a) & np.isfinite(b)
+    a = a[finite]
+    b = b[finite]
     if a.size == 0 or a.std() < 1e-12 or b.std() < 1e-12:
         return float("nan")
     return float(np.corrcoef(a, b)[0, 1])

@@ -1,4 +1,6 @@
 # Per-pixel mean over frames [35, 42) — half-open slice (frames 35–41).
+# normalization: none | baseline_zscore (aliases: raw | zscore_baseline)
+# For z-score catalog runs prefer configs/windows/evoked_35_42_zscore.yaml.
 
 window_id: win_0035_0042
 start_frame: 35

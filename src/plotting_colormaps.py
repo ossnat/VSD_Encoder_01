@@ -24,6 +24,8 @@ def register_mapgeog() -> None:
         ],
         N=256,
     )
+    # Masked / out-of-ROI predictions use NaN; render like the dark low end.
+    cmap = cmap.with_extremes(bad=(0.0, 0.0, 0.15))
     matplotlib.colormaps.register(cmap)
 
 

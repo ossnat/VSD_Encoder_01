@@ -39,8 +39,9 @@ def pixel_correlation_across_trials(
 
     o = originals.astype(np.float64)
     r = reconstructions.astype(np.float64)
-    o_c = o - np.nanmean(o, axis=0, keepdims=True)
-    r_c = r - np.nanmean(r, axis=0, keepdims=True)
+    with np.errstate(all="ignore"):
+        o_c = o - np.nanmean(o, axis=0, keepdims=True)
+        r_c = r - np.nanmean(r, axis=0, keepdims=True)
     num = np.nansum(o_c * r_c, axis=0)
     denom = np.sqrt(np.nansum(o_c**2, axis=0) * np.nansum(r_c**2, axis=0))
     with np.errstate(invalid="ignore", divide="ignore"):
@@ -69,11 +70,15 @@ def pixel_r2_across_trials(
 
     o = originals.astype(np.float64)
     r = reconstructions.astype(np.float64)
-    o_mean = np.nanmean(o, axis=0, keepdims=True)
+    with np.errstate(all="ignore"):
+        o_mean = np.nanmean(o, axis=0, keepdims=True)
     ss_tot = np.nansum((o - o_mean) ** 2, axis=0)
     ss_res = np.nansum((o - r) ** 2, axis=0)
+    n_finite = np.sum(np.isfinite(o) & np.isfinite(r), axis=0)
     with np.errstate(invalid="ignore", divide="ignore"):
         r2 = 1.0 - ss_res / ss_tot
+    # Out-of-mask / missing predictions: nansum would yield ss_res=0 → R²=1.
+    r2 = np.where(n_finite > 0, r2, np.nan)
     return r2.astype(np.float32)
 
 
@@ -234,6 +239,10 @@ def load_trial_mean_maps(
     start_frame: int,
     end_frame: int,
     avg_method: str,
+    normalization: str = "none",
+    baseline_start_frame: int = 2,
+    baseline_end_frame: int = 26,
+    baseline_std_eps: float = 1e-8,
 ) -> np.ndarray:
     """Stack trial-averaged original maps from H5 with shape (T, H, W)."""
     maps: list[np.ndarray] = []
@@ -247,6 +256,10 @@ def load_trial_mean_maps(
                 start_frame=start_frame,
                 end_frame=end_frame,
                 avg_method=avg_method,
+                normalization=normalization,
+                baseline_start_frame=baseline_start_frame,
+                baseline_end_frame=baseline_end_frame,
+                baseline_std_eps=baseline_std_eps,
             )
         )
     return np.stack(maps, axis=0)
@@ -275,6 +288,10 @@ def evaluate_pixel_correlation(
     avg_method: str,
     mask: np.ndarray | None = None,
     mask_radius: int | None = None,
+    normalization: str = "none",
+    baseline_start_frame: int = 2,
+    baseline_end_frame: int = 26,
+    baseline_std_eps: float = 1e-8,
 ) -> tuple[
     np.ndarray,
     np.ndarray,
@@ -303,6 +320,10 @@ def evaluate_pixel_correlation(
         start_frame=start_frame,
         end_frame=end_frame,
         avg_method=avg_method,
+        normalization=normalization,
+        baseline_start_frame=baseline_start_frame,
+        baseline_end_frame=baseline_end_frame,
+        baseline_std_eps=baseline_std_eps,
     )
     reconstructions = load_reconstructed_maps(
         eval_df,

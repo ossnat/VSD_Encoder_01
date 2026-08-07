@@ -1,11 +1,36 @@
 #!/usr/bin/env bash
 # Shared env for Protocol A SLURM jobs.
 # Expects REPO_ROOT and optionally PIPELINE_CONFIG.
+#
+# Safe to source from interactive shells: missing REPO_ROOT (and other errors)
+# return 1 instead of exiting the parent shell.
 
-set -euo pipefail
+_is_sourced=0
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+  _is_sourced=1
+fi
 
-: "${REPO_ROOT:?REPO_ROOT must be set}"
-cd "${REPO_ROOT}"
+fail() {
+  echo "ERROR: $*" >&2
+  if [[ $_is_sourced -eq 1 ]]; then
+    return 1
+  else
+    exit 1
+  fi
+}
+
+# Strict mode for scripts / non-interactive jobs. Soften -e when sourced into an
+# interactive shell so a failed command cannot kill the SSH session.
+if [[ $_is_sourced -eq 1 && $- == *i* ]]; then
+  set -uo pipefail
+else
+  set -euo pipefail
+fi
+
+if [[ -z "${REPO_ROOT:-}" ]]; then
+  fail "REPO_ROOT must be set" || return 1
+fi
+cd "${REPO_ROOT}" || { fail "cannot cd to REPO_ROOT=${REPO_ROOT}" || return 1; }
 
 export MPLBACKEND="${MPLBACKEND:-Agg}"
 export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
@@ -13,14 +38,12 @@ export TORCH_HOME="${TORCH_HOME:-${REPO_ROOT}/.cache/torch}"
 
 PYTHON="${REPO_ROOT}/.venv/bin/python"
 if [[ ! -x "${PYTHON}" ]]; then
-  echo "ERROR: ${PYTHON} not found. Run: bash scripts/cluster_setup.sh" >&2
-  exit 1
+  fail "${PYTHON} not found. Run: bash scripts/cluster_setup.sh" || return 1
 fi
 
 PIPELINE_CONFIG="${PIPELINE_CONFIG:-experiments/loo_encoding/slurm/protocol_A_full.yaml}"
 if [[ ! -f "${PIPELINE_CONFIG}" ]]; then
-  echo "ERROR: missing PIPELINE_CONFIG=${PIPELINE_CONFIG}" >&2
-  exit 1
+  fail "missing PIPELINE_CONFIG=${PIPELINE_CONFIG}" || return 1
 fi
 
 mkdir -p logs experiments/loo_encoding/slurm/logs
@@ -59,8 +82,7 @@ load_manifest() {
   local run_root="$1"
   local man="${run_root}/pipeline_manifest.yaml"
   if [[ ! -f "${man}" ]]; then
-    echo "ERROR: missing ${man}. Run prepare stage first." >&2
-    exit 1
+    fail "missing ${man}. Run prepare stage first." || return 1
   fi
   echo "${man}"
 }

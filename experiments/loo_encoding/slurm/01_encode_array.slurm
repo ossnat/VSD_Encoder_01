@@ -105,6 +105,7 @@ CMD=(
   --heldout "${HELDOUT}"
   --fold-id "${FOLD_ID}"
   --array-worker
+  --no-save-model
 )
 
 if [[ -n "${CLEAN_CSV}" ]]; then

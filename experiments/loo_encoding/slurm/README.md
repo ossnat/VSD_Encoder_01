@@ -79,7 +79,7 @@ DRY_RUN_SUBMIT=1 bash experiments/loo_encoding/slurm/submit_full_protocol_A.sh
 | Stage | Script | What |
 |------:|--------|------|
 | 0 | `00_prepare.slurm` | Dry-run 4 leaves → `params.yaml`, `folds_index.yaml`, `folds.txt`, `pipeline_manifest.yaml` |
-| 1 | `01_encode_array.slurm` | Array: `run_loo_encoding.py --fold-id … --array-worker` (saves `model.joblib`) |
+| 1 | `01_encode_array.slurm` | Array: `run_loo_encoding.py --fold-id … --array-worker --no-save-model` (models not saved by default to avoid quota blowups) |
 | 2 | `02_finalize_and_maps.slurm` | `finalize_loo_leaf.py` + triplet overviews + pooled encoding r maps |
 | 3 | `03_noise_corr.slurm` | `compute_fold_noise_corr_odd_even.py` → `noise_corr_odd_even/` |
 | 4 | `04_report.slurm` | `build_protocol_A_report_pdf.py` → `report.pdf` |

@@ -13,12 +13,11 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-export REPO_ROOT
+# SLURM copies the script to /var/spool/slurmd/… — do not resolve paths via BASH_SOURCE.
+: "${REPO_ROOT:?REPO_ROOT must be set (export before sbatch)}"
 export PIPELINE_CONFIG="${PIPELINE_CONFIG:-experiments/loo_encoding/slurm/protocol_A_full.yaml}"
 # shellcheck source=/dev/null
-source "${SCRIPT_DIR}/common.sh"
+source "${REPO_ROOT}/experiments/loo_encoding/slurm/common.sh"
 
 : "${RUN_ROOT:?Set RUN_ROOT}"
 RUN_ROOT_PATH="${RUN_ROOT}"

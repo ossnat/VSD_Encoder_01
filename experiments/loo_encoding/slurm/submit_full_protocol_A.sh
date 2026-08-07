@@ -77,9 +77,9 @@ echo "PIPELINE_CONFIG=${PIPELINE_CONFIG}"
 # Stage 0: prepare (blocking if we need fold counts for arrays)
 PREPARE_ARGS=()
 if [[ -n "${RUN_DATE:-}" ]]; then
-  PREPARE_ARGS+=(--export=ALL,PIPELINE_CONFIG="${PIPELINE_CONFIG}",RUN_DATE="${RUN_DATE}")
+  PREPARE_ARGS+=(--export=ALL,REPO_ROOT="${REPO_ROOT}",PIPELINE_CONFIG="${PIPELINE_CONFIG}",RUN_DATE="${RUN_DATE}")
 else
-  PREPARE_ARGS+=(--export=ALL,PIPELINE_CONFIG="${PIPELINE_CONFIG}")
+  PREPARE_ARGS+=(--export=ALL,REPO_ROOT="${REPO_ROOT}",PIPELINE_CONFIG="${PIPELINE_CONFIG}")
 fi
 
 JOB_PREP="$(submit "prepare" "${PREPARE_ARGS[@]}" "${SCRIPT_DIR}/00_prepare.slurm")"

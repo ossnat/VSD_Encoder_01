@@ -15,8 +15,10 @@
 #   experiments/**/runs/, experiments/**/models/, experiment logs
 # =============================================================================
 
-# Shared workspace data (sibling Data/ directory)
-Data/
+# Shared workspace data (sibling Data/ directory).
+# Anchor at repo root (`/Data/`) so case-insensitive macOS git does not also
+# ignore the Python package `src/data/` via the `Data/` pattern.
+/Data/
 ../Data/
 
 # Project-generated artifacts (under shared Data/)

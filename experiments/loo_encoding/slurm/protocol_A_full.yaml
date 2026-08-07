@@ -1,0 +1,44 @@
+# Protocol A full LOO pipeline config (flat run layout).
+# Copy / edit for other models: change model + feature_layer (+ optional run_root).
+#
+# Used by:
+#   experiments/loo_encoding/prepare_protocol_A_pipeline.py
+#   experiments/loo_encoding/slurm/submit_full_protocol_A.sh
+
+run_date: null          # null → today (YYYY-MM-DD); or pin e.g. "2026-08-07"
+run_root: null          # null → auto YYYY-MM-DD_35-46_resnet18_l3; or set explicitly
+
+monkey: gandalf
+model: configs/models/resnet18.yaml
+feature_layer: layer3
+ridge_config: configs/ridge/default.yaml
+loss_roi: noise_ceiling_hull
+heldout_list: experiments/loo_encoding/heldout_list.yaml
+
+windows:
+  zscore: configs/windows/evoked_35_46_zscore.yaml
+  raw: configs/windows/evoked_35_46.yaml
+
+trial_cleanliness:
+  # auto → Data/VSD_Encoder_01/qc/trial_cleanliness_{monkey}__{zscore_window_id}.csv
+  csv: auto
+  keep: [good]
+
+# SLURM resource defaults (override via env when submitting)
+slurm:
+  partition: generic          # CHANGE ME for your cluster
+  account: null               # e.g. mylab  (omit if unused)
+  time_encode: "04:00:00"     # per fold
+  time_noise: "02:00:00"
+  time_post: "06:00:00"       # finalize + pooled maps (CPU-heavy)
+  time_report: "01:00:00"
+  cpus_encode: 4
+  mem_encode: 48G
+  cpus_noise: 4
+  mem_noise: 32G
+  cpus_post: 8
+  mem_post: 64G
+  cpus_report: 2
+  mem_report: 16G
+  # Optional: limit concurrent array tasks (cluster etiquette)
+  array_throttle: 50          # sbatch --array=0-N%50

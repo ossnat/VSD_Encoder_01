@@ -19,9 +19,9 @@ fail() {
   fi
 }
 
-# Strict mode for scripts / non-interactive jobs. Soften -e when sourced into an
-# interactive shell so a failed command cannot kill the SSH session.
+# Interactive+sourced: never enable errexit (and clear it) so a failed cmd cannot kill SSH.
 if [[ $_is_sourced -eq 1 && $- == *i* ]]; then
+  set +e
   set -uo pipefail
 else
   set -euo pipefail

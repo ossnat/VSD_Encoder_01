@@ -7,30 +7,39 @@ or `experiments/noise_ceiling_roi/nc_roi_utils.py`.
 
 Grouped stimulus catalog matching `experiments/stimulus_catalog/`, with:
 
-| Setting | Prior catalog | Report 5 |
+| Setting | Prior catalog | Report 5 (current) |
 |---|---|---|
 | Window | typically `win_0035_0042` (± zscore) | `win_0035_0046_zscore` |
-| Normalization | raw F/F₀ or baseline z-score | **baseline z-score** (`[2,26)` → z-score full trial → mean `[35,46)`) |
-| Trials shown | 10 | **8** |
+| Normalization | raw F/F₀ or baseline z-score | **baseline z-score** (`[5,26)` → z-score full trial → mean `[35,46)`) |
+| Rows | one per `stimulus_id` (dates pooled) | **one per stimulus_id × session/date** |
+| Trials shown | 10 / first 8 | **up to 8 distinct**, evenly spaced (deterministic) |
 | Columns | stimulus + trials | stimulus + **SNR** + trials |
 | Groups | dots/circles, geometric, letters | same |
 
 ### Columns
 
-1. **stimulus** — canonical re-render from stimuli manifest (gray-128 background).
-2. **SNR** — trial-mean map (same colormap as trials) with annotated SNR value.
-3. **trial 1…8** — first 8 trials after sort by `trial_global_id`, then date / condition / session.
+1. **stimulus** — canonical re-render from stimuli manifest (gray-128 background). Row label includes `stimulus_id · <session>` (e.g. `letter_D_white_1 · 201118c`).
+2. **SNR map** — per-pixel `|μ|/σ` across **that session’s** trials over the **full FOV**
+   (viridis; not NC-ROI masked). Bottom scalar = `mean(snr_pix)` over finite
+   full-frame pixels.
+3. **trial 1…8** — up to 8 distinct trials for that date×condition, evenly spaced
+   across the sorted `trial_global_id` list (no RNG).
 
 ### SNR definition
 
-For each stimulus, load **all** available encoding-pair trials (not only the 8 shown). Each trial map is the analysis-window mean after baseline z-score. Then:
+For each stimulus×session row, load **all** available encoding-pair trials for
+that `(stimulus_id, date)` (not only the 8 shown). Each trial map is the
+analysis-window mean after baseline z-score (`[5, 26)`). Then:
 
 ```
-snr_pix(x,y) = |mean_T map(x,y)| / std_T map(x,y)   # sample std, ddof=1
-SNR          = mean of snr_pix inside circular eval disk (radius 50)
+snr_pix(x,y) = |mean_T map(x,y)| / std_T map(x,y)   # sample std, ddof=1; abs on mean
+SNR (scalar / metadata) = mean of snr_pix over finite full-frame pixels
 ```
 
-Helper: `src/evaluation/snr.py` (`map_snr_across_trials`). Disk radius matches ridge `evaluation.mask_radius`.
+Note: the figure column shows `snr_pix` itself (with abs), not signed `μ/σ`.
+Default display and scalar use the full FOV (no NC hull mask). Optional
+`--snr-mask` can restrict the summary. Helper:
+`src/evaluation/snr.py` (`map_snr_across_trials`).
 
 ### Run
 
@@ -49,8 +58,17 @@ scripts/py experiments/report_5/build_stimuli_catalog.py \
   --group geometric_shapes
 ```
 
-Outputs: `experiments/report_5/figures/stimuli_catalog/stimulus_catalog_<group>__win_0035_0046_zscore.{png,json}`
+Optional: `--snr-mask path/to/mask.npy` (default: full frame, no mask).
+Use `--no-snr-scalar-label` to omit the bottom SNR text (legacy NC-ROI style).
 
+Default outputs (per-session full-frame):
+`experiments/stimulus_catalog/figures/snr_maps_win_0035_0046_zscore_per_session/stimulus_catalog_<group>__win_0035_0046_zscore.{png,json}`
+
+Prior pooled-stimulus full-frame catalog remains under:
+`experiments/stimulus_catalog/figures/snr_maps_win_0035_0046_zscore_fullframe/`
+
+Legacy NC-ROI catalog (masked map, no bottom label) remains under:
+`experiments/stimulus_catalog/figures/snr_maps_win_0035_0046_zscore/`
 ---
 
 ## Task 2 — Across-condition NC ROI controls

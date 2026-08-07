@@ -99,7 +99,7 @@ sbatch slurm/build_stimulus_images.slurm
 - Multi-session blocks (`Session = a,b` or `a,b,c`) expand each condition to **every** listed session letter (same stimulus content; separate PNG under each `images/{h5_session}/`). Cortex-file suffixes on condition rows are **not** used to assign a single session.
 - An additional catalog `Data/EncoderData/ContrastCurve_Letters_*_ExpSummary.csv` is merged in stage 01b:
   - **Contrast curves** — filled circles with RGB from parentheses; Cond6 Blank / Cond8 Error skipped; target location components are swapped to the shapes-CSV convention.
-  - **Letters** — mats under `Data/EncoderData/letters_stimuli/` (session `c`/`d` prefer `2011C`/`2011D`); Control-attention rows skipped. Session **`201118a`** (11.20.18 letters, session a) is excluded — bad VSD frames; use **`201118c`** and **`201118d`** only (see `src/stimuli/exclusions.py`).
+  - **Letters** — mats under `Data/EncoderData/letters_stimuli/` (session `c`/`d` prefer `2011C`/`2011D`); Control-attention rows skipped. Sessions **`201118a`** and **`201118b`** (11.20.18) are excluded; use **`201118c`** and **`201118d`** only (see `src/stimuli/exclusions.py`).
 - **Background:** all rendered PNGs use canonical gray **RGB (128, 128, 128)** from `configs/stimuli/default.yaml`. Letter BMP/MAT assets may have session-specific field gray; the renderer normalizes the canvas to 128. Contrast-curve session Blank RGB is used only for target polarity checks, not the canvas.
 - Methods reference: `Data/EncoderData/8267.full.pdf`
 - **Catalog QC:** the build script prints a warning if the same `(h5_session, condition)` appears twice (e.g. `240718*` / `condAN6` blank vs bar in the current Gandalf CSV). Encoding-pair joins prefer the non-blank row.

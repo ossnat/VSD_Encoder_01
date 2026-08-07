@@ -240,7 +240,7 @@ def load_trial_mean_maps(
     end_frame: int,
     avg_method: str,
     normalization: str = "none",
-    baseline_start_frame: int = 2,
+    baseline_start_frame: int = 5,
     baseline_end_frame: int = 26,
     baseline_std_eps: float = 1e-8,
 ) -> np.ndarray:
@@ -289,7 +289,7 @@ def evaluate_pixel_correlation(
     mask: np.ndarray | None = None,
     mask_radius: int | None = None,
     normalization: str = "none",
-    baseline_start_frame: int = 2,
+    baseline_start_frame: int = 5,
     baseline_end_frame: int = 26,
     baseline_std_eps: float = 1e-8,
 ) -> tuple[

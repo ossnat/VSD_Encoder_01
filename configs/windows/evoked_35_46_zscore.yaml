@@ -2,7 +2,7 @@
 #
 # Frame indexing is 0-based and half-open throughout:
 #   analysis:  [35, 46) → frames 35..45 inclusive
-#   baseline:  [2, 26)  → frames 2..25 inclusive (per-pixel mean/std)
+#   baseline:  [5, 26)  → frames 5..25 inclusive (per-pixel mean/std)
 # Each pixel is z-scored as (x - mean) / max(std, eps) before averaging.
 # Aliases: normalization may also be written as zscore_baseline; none/raw = off.
 
@@ -11,6 +11,6 @@ start_frame: 35
 end_frame: 46
 avg_method: mean
 normalization: baseline_zscore
-baseline_start_frame: 2
+baseline_start_frame: 5
 baseline_end_frame: 26
 baseline_std_eps: 1.0e-8

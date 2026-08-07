@@ -103,3 +103,63 @@ scripts/py experiments/stimulus_catalog/build_example_catalog_figure.py --all-gr
 ```
 
 Outputs are written under `experiments/stimulus_catalog/figures/`.
+
+## SNR maps (frames 35–45, z-scored)
+
+Per-pixel SNR catalog (stimulus | SNR map | 8 trials), window
+`win_0035_0046_zscore` (`[35, 46)` after baseline z-score on `[5, 26)`).
+
+**Per-session catalog** (default; one row per stimulus×session; full FOV):
+
+```bash
+scripts/py experiments/report_5/build_stimuli_catalog.py
+```
+
+Formula: `snr_pix = |mean_across_trials| / std_across_trials` (ddof=1),
+computed **per session** (that date×condition trial set). Bottom scalar =
+`mean(snr_pix)` over finite full-frame pixels. Up to 8 **distinct** trials are
+shown, evenly spaced across the sorted trial list (deterministic, no RNG).
+Outputs:
+`experiments/stimulus_catalog/figures/snr_maps_win_0035_0046_zscore_per_session/`.
+
+**Prior pooled-stimulus full-frame catalog** (one row per `stimulus_id`):
+`experiments/stimulus_catalog/figures/snr_maps_win_0035_0046_zscore_fullframe/`.
+
+**Legacy NC-ROI catalog** (NaN outside hull; no bottom label):
+
+```bash
+scripts/py experiments/report_5/build_stimuli_catalog.py \
+  --output-dir experiments/stimulus_catalog/figures/snr_maps_win_0035_0046_zscore \
+  --snr-mask experiments/noise_ceiling_roi/rois/global_noise_ceiling_hull__mask.npy \
+  --no-snr-scalar-label
+```
+
+## Clean vs outlier catalogs
+
+Trial cleanliness (LOO full-FOV QC) is a **standalone** table, not a column on
+`all_trials_index_gandalf.csv` (upstream FoundationData) or encoding-pairs
+parquet (window-specific). Join at train time:
+
+```python
+qc = pd.read_csv(resolve_data_path(
+    "Data/VSD_Encoder_01/qc/trial_cleanliness_gandalf__win_0035_0046_zscore.csv"
+))
+pairs = pairs.merge(qc[["trial_global_id", "trial_cleanliness"]], on="trial_global_id")
+pairs = pairs[pairs["trial_cleanliness"] == "good"]
+```
+
+Classify / refresh labels:
+
+```bash
+scripts/py scripts/17_classify_trial_cleanliness.py
+```
+
+Build three SNR catalogs (clean / pattern / amp-edge only), same layout as the
+per-session catalog:
+
+```bash
+scripts/py experiments/report_5/build_stimuli_catalog_cleanliness.py
+```
+
+Outputs:
+`experiments/stimulus_catalog/figures/snr_clean_vs_outliers/`.

@@ -231,7 +231,9 @@ def plot_condition_orig_recon_corr(
     trial_r = payload.get("mean_trial_spatial_r", float("nan"))
 
     fig, axes = plt.subplots(1, 3, figsize=(12, 3.8), layout="constrained")
-    vmin, vmax = _shared_limits([orig, recon])
+    # Anchor shared orig/recon clim on the original so off-scale reconstructions
+    # do not wash out the trial-mean map (same window → identical originals).
+    vmin, vmax = _shared_limits([orig])
 
     im0 = axes[0].imshow(orig, cmap=VSD_CMAP, vmin=vmin, vmax=vmax)
     axes[0].set_title("Condition-mean original")

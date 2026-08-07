@@ -4,7 +4,7 @@
 
 Global reliability convex hull where the **correlation vector length is
 `n_stimuli`**, not `n_trials`. Official LOO mask =
-**naive (magenta) hull at thr=0.85**.
+**naive (magenta) hull at thr=0.90** on `win_0035_0042`.
 
 ## Method
 
@@ -24,7 +24,7 @@ Then:
 6. **Spearman-Brown**: `r_sb = 2r / (1 + r)` (map + whole-field pattern).
 7. Threshold high-*r* pixels → **convex hull** → filled mask.
    - **Naive hull** (official / magenta outline): hull of all pixels with
-     `r >= thr`. At **thr=0.85** this is installed as
+     `r >= thr`. At **thr=0.90** this is installed as
      `--loss-roi noise_ceiling_hull`.
    - **Cleaned hull** (lime outline, comparison only): 8-connected components
      with area ≥ `min_component_pixels` (default 50), keep largest
@@ -39,11 +39,11 @@ Then:
 
 ## Window / normalization (ROI creation only)
 
-**Default:** raw `configs/windows/evoked_35_46.yaml` → `win_0035_0046`
+**Default:** raw `configs/windows/evoked_35_42.yaml` → `win_0035_0042`
 
 | Field | Value |
 |-------|--------|
-| ROI window | `[35, 46)` → frames 35–45 inclusive |
+| ROI window | `[35, 42)` → frames 35–41 inclusive |
 | Normalization | `none` (raw F/F₀ window mean) |
 
 This `--window` chooses the frames/normalization used to **build** the mask.
@@ -51,23 +51,23 @@ It does **not** force LOO / ridge analysis to the same window: analysis keeps
 its own config, and `--loss-roi noise_ceiling_hull` loads the installed
 `.npy` regardless of how that mask was built.
 
-Example — ROI on 35–42, analysis elsewhere still fine:
+Example — ROI on 35–46, analysis elsewhere still fine:
 
 ```bash
 scripts/py experiments/noise_ceiling_roi/across_condition/compute_across_condition_reliability.py \
-  --window configs/windows/evoked_35_42.yaml
+  --window configs/windows/evoked_35_46.yaml
 ```
 
 Optional baseline z-score (requires encoding pairs for that `window_id`):
 
 ```bash
 scripts/py experiments/noise_ceiling_roi/across_condition/compute_across_condition_reliability.py \
-  --window configs/windows/evoked_35_46_zscore.yaml
+  --window configs/windows/evoked_35_42_zscore.yaml
 ```
 
 | Z-score field | Value |
 |---------------|--------|
-| Baseline | `[2, 26)` → frames 2–25 |
+| Baseline | `[5, 26)` → frames 5–25 |
 | Then | per-pixel z-score → mean over analysis frames in the YAML |
 
 The script loads start/end/normalization from the window YAML (same helpers as
@@ -83,7 +83,7 @@ Useful flags:
 
 - `--window <yaml>` — ROI-creation window (independent of LOO analysis window)
 - `--thresholds 0.50 0.60 … 0.95` — hull sweep (default includes 0.85–0.95)
-- `--default-threshold 0.85` — which threshold’s mask is installed as official
+- `--default-threshold 0.90` — which threshold’s mask is installed as official
 - `--default-variant naive|cleaned` — install naive (default) or cleaned hull
 - `--min-component-pixels 50` / `--keep-top-n 2` — cleaned-hull CC filter
 - `--threshold-on r|r_sb` — threshold raw *r* or SB-corrected map
@@ -102,8 +102,8 @@ Under `experiments/noise_ceiling_roi/across_condition/`:
 |------|---------|
 | `figures/<window_id>/across_condition__reliability_map.png` | Grand mean + *r* map |
 | `figures/<window_id>/across_condition__reliability_hull_thr0.XX.png` | *r* map + cleaned seeds + cleaned/naive hulls |
-| `figures/<window_id>/across_condition__correlation_map__naive_hull_thr0.85.png` | Clean *r* map + magenta naive thr0.85 |
-| `figures/<window_id>/across_condition__naive_hull_thr0.85__on_*.png` | Naive thr0.85 overlaid on stim means |
+| `figures/<window_id>/across_condition__correlation_map__naive_hull_thr0.90.png` | Clean *r* map + magenta naive thr0.90 |
+| `figures/<window_id>/across_condition__naive_hull_thr0.90__on_*.png` | Naive thr0.90 overlaid on stim means |
 | `rois/across_condition_r_map__<window_id>.npy` | Per-pixel *r* |
 | `rois/across_condition_r_sb_map__<window_id>.npy` | Per-pixel *r_sb* |
 | `rois/global_across_condition_{cleaned,naive}_hull__<window>__thr0.XX__mask.npy` | Hull masks |
@@ -112,7 +112,7 @@ Under `experiments/noise_ceiling_roi/across_condition/`:
 | `across_condition_summary__<window_id>.yaml` | Global metrics |
 | `across_condition_stimuli__<window_id>.csv` | Per-stim trial / half counts |
 
-**Default install** (naive / magenta hull at thr=0.85 unless overridden):
+**Default install** (naive / magenta hull at thr=0.90 unless overridden):
 
 `experiments/noise_ceiling_roi/rois/global_noise_ceiling_hull__mask.npy`
 

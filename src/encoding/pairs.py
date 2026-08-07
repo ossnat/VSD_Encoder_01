@@ -11,7 +11,7 @@ from src.data.xarray_schema import trial_output_path, window_id_from_frames
 from src.encoding.schema import encoding_pairs_manifest_path
 from src.paths import resolve_data_path
 from src.stimuli.exclusions import (
-    EXCLUDED_LETTER_H5_SESSIONS,
+    EXCLUDED_H5_SESSIONS,
     is_excluded_encoding_trial,
 )
 from src.stimuli.schema import manifest_path as stimulus_manifest_path
@@ -127,13 +127,13 @@ def build_encoding_pairs(
             axis=1,
         )
     else:
-        # Fallback without shape_type: exclude only configured letter sessions.
-        exclude_mask = pairs["date"].astype(str).isin(EXCLUDED_LETTER_H5_SESSIONS)
+        # Fallback without shape_type: exclude configured bad sessions.
+        exclude_mask = pairs["date"].astype(str).isin(EXCLUDED_H5_SESSIONS)
     n_excluded = int(exclude_mask.sum())
     if n_excluded:
         print(
-            f"Excluded {n_excluded} trials from excluded letter session(s) "
-            f"(see src/stimuli/exclusions.py)"
+            f"Excluded {n_excluded} trials from excluded session(s) "
+            f"{sorted(EXCLUDED_H5_SESSIONS)} (see src/stimuli/exclusions.py)"
         )
         pairs = pairs.loc[~exclude_mask].reset_index(drop=True)
 

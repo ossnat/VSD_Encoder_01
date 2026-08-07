@@ -45,8 +45,8 @@ def test_baseline_zscore_then_average():
 def test_baseline_zscore_nonzero_std():
     rng = np.random.default_rng(0)
     trial = rng.normal(size=(100, 40)).astype(np.float32)
-    # Make baseline mean 0 std 1 approximately by construction on first 10 frames
-    baseline = trial[:, 2:26]
+    # Default production baseline is [5, 26) (frames 5..25 inclusive).
+    baseline = trial[:, 5:26]
     mean = baseline.mean(axis=1, keepdims=True)
     std = np.maximum(baseline.std(axis=1, keepdims=True), 1e-8)
     expected = ((trial - mean) / std)[:, 30:35].mean(axis=1).reshape(10, 10)
@@ -56,7 +56,7 @@ def test_baseline_zscore_nonzero_std():
         35,
         spatial_size=(10, 10),
         normalization="zscore_baseline",
-        baseline_start_frame=2,
+        baseline_start_frame=5,
         baseline_end_frame=26,
         baseline_std_eps=1e-8,
     )

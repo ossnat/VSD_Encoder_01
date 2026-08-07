@@ -5,9 +5,9 @@ Resolve CLI aliases such as ``none``, ``disk``, ``box_union``,
 ``(H, W)`` mask (or ``None`` for full-frame MSE).
 
 The global noise-ceiling hull mask is the across-condition **naive** (magenta)
-convex hull at thr=0.85 (``r >= 0.85``), installed at
+convex hull at thr=0.90 (``r >= 0.90``), installed at
 ``NOISE_CEILING_HULL_MASK_RELPATH``. That artifact is built with the NC ROI
-``--window`` (default ``win_0035_0046`` raw) and is **independent** of the
+``--window`` (currently ``win_0035_0042`` raw) and is **independent** of the
 LOO / ridge analysis window — analysis uses its own config and simply loads
 the installed mask. Selecting ``noise_ceiling_hull`` raises a clear error if
 the file is missing.
@@ -32,8 +32,8 @@ from src.paths import project_root
 BOX_UNION_MASK_RELPATH = Path(
     "experiments/loo_encoding/roi_compare/union_of_boxes__mask.npy"
 )
-# Official global noise-ceiling hull (naive / magenta across-condition thr0.85).
-# Built via NC ROI --window (default win_0035_0046); independent of LOO window.
+# Official global noise-ceiling hull (naive / magenta across-condition thr0.90).
+# Built via NC ROI --window (win_0035_0042); independent of LOO window.
 NOISE_CEILING_HULL_MASK_RELPATH = Path(
     "experiments/noise_ceiling_roi/rois/global_noise_ceiling_hull__mask.npy"
 )
@@ -59,7 +59,7 @@ def parse_loss_roi_arg(raw: str) -> tuple[str, Path | None]:
       - ``none`` / ``full`` — full-frame Y (default)
       - ``disk`` / ``circular`` — centered circle (radius from ridge eval cfg)
       - ``box_union`` — union-of-boxes mask at ``BOX_UNION_MASK_RELPATH``
-      - ``noise_ceiling_hull`` — official global naive hull mask (thr0.85)
+      - ``noise_ceiling_hull`` — official global naive hull mask (thr0.90)
       - ``roi`` — held-out stimulus box from ``--roi-dir``
       - any other string — filesystem path to ``.npy`` / ``.yaml``
     """
@@ -198,7 +198,7 @@ def resolve_loss_roi(
             raise FileNotFoundError(
                 f"loss ROI mode 'noise_ceiling_hull' selected, but mask file "
                 f"is missing: {resolved}. "
-                f"Install the across-condition naive hull (thr=0.85) at this "
+                f"Install the across-condition naive hull (thr=0.90) at this "
                 f"path, or pass an explicit --target-mask / --loss-roi path."
             )
         if not resolved.is_file():

@@ -55,7 +55,7 @@ plots/averaged/{monkey}/{window_id}/
 | `source_n_frames` | Original trial length (axis 1 of H5 array) |
 | `avg_method` | `mean` (default) |
 | `normalization` | `none` / `raw` (default) or `baseline_zscore` / `zscore_baseline` |
-| `baseline_start_frame`, `baseline_end_frame` | Half-open baseline for z-score, default `[2, 26)` (frames 2..25) |
+| `baseline_start_frame`, `baseline_end_frame` | Half-open baseline for z-score, default `[5, 26)` (frames 5..25) |
 | `baseline_std_eps` | Floor for per-pixel std (default `1e-8`) so zero-std pixels stay finite |
 
 ### Baseline z-score (`normalization: baseline_zscore`)

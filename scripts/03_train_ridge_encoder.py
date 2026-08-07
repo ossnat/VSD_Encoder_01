@@ -44,6 +44,7 @@ from src.encoding.ridge_plotting import (
 )
 from src.encoding.schema import encoding_pairs_manifest_path, ridge_output_dir
 from src.paths import project_root, resolve_data_path, workspace_root
+from src.qc.trial_cleanliness import filter_pairs_by_cleanliness
 
 
 def _load_yaml(path: Path) -> dict:
@@ -76,7 +77,7 @@ def _load_h5_mean_frame(
     end_frame: int,
     avg_method: str,
     normalization: str = "none",
-    baseline_start_frame: int = 2,
+    baseline_start_frame: int = 5,
     baseline_end_frame: int = 26,
     baseline_std_eps: float = 1e-8,
 ) -> np.ndarray:
@@ -101,6 +102,8 @@ def train_ridge_encoder(
     model_cfg_path: Path,
     repo: Path | None = None,
     feature_layer: str | None = None,
+    trial_cleanliness_csv: Path | None = None,
+    trial_cleanliness_keep: list[str] | None = None,
 ) -> dict:
     repo = repo or project_root()
     monkey = cfg["monkey"]
@@ -112,7 +115,7 @@ def train_ridge_encoder(
     from src.data.averaging import resolve_normalization
 
     normalization = resolve_normalization(cfg.get("normalization", "none"))
-    baseline_start_frame = int(cfg.get("baseline_start_frame", 2))
+    baseline_start_frame = int(cfg.get("baseline_start_frame", 5))
     baseline_end_frame = int(cfg.get("baseline_end_frame", 26))
     baseline_std_eps = float(cfg.get("baseline_std_eps", 1e-8))
     ridge_cfg = cfg["ridge"]
@@ -136,6 +139,25 @@ def train_ridge_encoder(
     if pairs.empty:
         raise RuntimeError("No complete encoding pairs with nc + stimulus on disk")
 
+    cleanliness_stats = None
+    if trial_cleanliness_csv is not None:
+        pairs, cleanliness_stats = filter_pairs_by_cleanliness(
+            pairs,
+            csv_path=trial_cleanliness_csv,
+            keep=trial_cleanliness_keep or ["good"],
+            repo=repo,
+        )
+        print(
+            "trial_cleanliness filter: "
+            f"keep={cleanliness_stats['keep']} "
+            f"n_before={cleanliness_stats['n_before']} "
+            f"n_after={cleanliness_stats['n_after']} "
+            f"n_dropped={cleanliness_stats['n_dropped']}"
+        )
+        if pairs.empty:
+            raise RuntimeError(
+                "No encoding pairs left after trial-cleanliness filter"
+            )
     features_root = resolve_data_path(cfg["paths"]["dl_features_stimuli_root"], repo)
     pairs = attach_feature_paths(
         pairs,
@@ -370,6 +392,9 @@ def train_ridge_encoder(
         "plot_dir": str(plot_dir.relative_to(repo)),
         "created": datetime.now(timezone.utc).isoformat(),
     }
+    if cleanliness_stats is not None:
+        run_cfg["trial_cleanliness"] = cleanliness_stats
+        metrics["trial_cleanliness"] = cleanliness_stats
     with (out_dir / "config.json").open("w") as f:
         json.dump(run_cfg, f, indent=2)
     with (out_dir / "metrics.json").open("w") as f:
@@ -427,6 +452,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Override feature_layer from the model YAML",
     )
     parser.add_argument("--monkey", type=str, default=None)
+    parser.add_argument(
+        "--trial-cleanliness-csv",
+        type=Path,
+        default=None,
+        help=(
+            "QC CSV keyed by trial_global_id with trial_cleanliness labels. "
+            "Joined at load time; does not mutate FoundationData indexes."
+        ),
+    )
+    parser.add_argument(
+        "--trial-cleanliness-keep",
+        nargs="+",
+        default=["good"],
+        help="Labels to keep when --trial-cleanliness-csv is set (default: good).",
+    )
     return parser.parse_args(argv)
 
 
@@ -439,6 +479,8 @@ def main(argv: list[str] | None = None) -> int:
         cfg,
         model_cfg_path=args.model,
         feature_layer=args.feature_layer,
+        trial_cleanliness_csv=args.trial_cleanliness_csv,
+        trial_cleanliness_keep=args.trial_cleanliness_keep,
     )
     return 0
 

@@ -121,11 +121,18 @@ def plot_pixel_mean_maps(
     *,
     title: str,
 ) -> Path:
-    """Side-by-side trial-mean original, reconstruction, and difference maps."""
+    """Side-by-side trial-mean original, reconstruction, and difference maps.
+
+    Orig/recon share a color scale anchored on the **original** map only.
+    Sharing percentiles with a badly scaled reconstruction (common for weak
+    held-out encoders on raw F/F₀ ≈ 1) expands clim by tens of × and washes
+    out the original — so the same window's originals would look different
+    across models. Residual keeps its own symmetric scale.
+    """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig, axes = plt.subplots(1, 3, figsize=(11, 3.8))
 
-    vmin, vmax = _shared_limits([mean_original, mean_reconstruction])
+    vmin, vmax = _shared_limits([mean_original])
     diff_lim = float(np.nanpercentile(np.abs(mean_diff), 99))
     diff_lim = diff_lim if diff_lim > 1e-8 else 1.0
 
@@ -212,8 +219,8 @@ def plot_test_conditions_grid(
     all_orig = [c["original"] for c in conditions]
     all_recon = [c["reconstruction"] for c in conditions]
     masked_orig = [apply_mask_nan(np.asarray(o), mask) for o in all_orig]
-    masked_recon = [apply_mask_nan(np.asarray(r), mask) for r in all_recon]
-    vmin, vmax = _shared_limits(masked_orig + masked_recon)
+    # Clim from originals only — off-scale recons must not wash out maps.
+    vmin, vmax = _shared_limits(masked_orig)
     diffs = [
         apply_mask_nan((np.asarray(r) - np.asarray(o)).astype(np.float32), mask)
         for o, r in zip(all_orig, all_recon)

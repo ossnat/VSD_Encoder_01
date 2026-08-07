@@ -1,8 +1,8 @@
 # Held-out stimulus identities for LOO protocols A and B (same list).
 # Missing IDs are skipped at fold-build time.
 #
-# Full non-blank inventory for win_0035_0043 after 201118a letter exclusion
-# (pairs already omit 201118a letter trials; blank is never listed).
+# Full non-blank inventory for win_0035_0043 after 201118a/b exclusion
+# (pairs already omit excluded sessions; blank is never listed).
 
 heldout_stimulus_ids:
   - black_bar_horizontal_0.3

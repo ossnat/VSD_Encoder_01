@@ -71,7 +71,7 @@ def evaluate_pixel_correlation_run(
     from src.data.averaging import resolve_normalization
 
     normalization = resolve_normalization(cfg.get("normalization", "none"))
-    baseline_start_frame = int(cfg.get("baseline_start_frame", 2))
+    baseline_start_frame = int(cfg.get("baseline_start_frame", 5))
     baseline_end_frame = int(cfg.get("baseline_end_frame", 26))
     baseline_std_eps = float(cfg.get("baseline_std_eps", 1e-8))
     ridge_cfg = cfg["ridge"]

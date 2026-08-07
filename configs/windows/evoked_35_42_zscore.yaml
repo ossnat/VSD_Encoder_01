@@ -2,7 +2,7 @@
 #
 # Frame indexing is 0-based and half-open throughout:
 #   analysis:  [35, 42) → frames 35..41 inclusive
-#   baseline:  [2, 26)  → frames 2..25 inclusive (per-pixel mean/std)
+#   baseline:  [5, 26)  → frames 5..25 inclusive (per-pixel mean/std)
 # Used by the stimulus catalog (same analysis window as win_0035_0042, z-scored).
 
 window_id: win_0035_0042_zscore
@@ -10,6 +10,6 @@ start_frame: 35
 end_frame: 42
 avg_method: mean
 normalization: baseline_zscore
-baseline_start_frame: 2
+baseline_start_frame: 5
 baseline_end_frame: 26
 baseline_std_eps: 1.0e-8

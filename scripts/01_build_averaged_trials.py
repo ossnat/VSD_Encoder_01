@@ -62,7 +62,7 @@ def build_averaged_trials(
     end_frame = int(cfg["end_frame"])
     avg_method = cfg.get("avg_method", "mean")
     normalization = resolve_normalization(cfg.get("normalization", "none"))
-    baseline_start_frame = int(cfg.get("baseline_start_frame", 2))
+    baseline_start_frame = int(cfg.get("baseline_start_frame", 5))
     baseline_end_frame = int(cfg.get("baseline_end_frame", 26))
     baseline_std_eps = float(cfg.get("baseline_std_eps", 1e-8))
     window_id = cfg.get("window_id") or window_id_from_frames(

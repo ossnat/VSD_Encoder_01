@@ -2,13 +2,15 @@
 #SBATCH --job-name=looA_fin
 #SBATCH --output=experiments/loo_encoding/slurm/logs/02_finalize_%j.out
 #SBATCH --error=experiments/loo_encoding/slurm/logs/02_finalize_%j.err
-#SBATCH --time=06:00:00
+#SBATCH --time=04:00:00
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 ##SBATCH --partition=generic
 ##SBATCH --account=CHANGE_ME
 # Required env: RUN_ROOT
 # Finalizes all four leaves (summary + overviews), then pooled encoding maps.
+# For raw-only maps in parallel, use 02b_pooled_maps_raw.slurm.
+# Resume after TIMEOUT: assemble uses --skip-existing.
 
 set -euo pipefail
 
@@ -49,7 +51,8 @@ done
 
 echo "Assembling pooled encoding pixel-r maps…"
 "${PYTHON}" experiments/loo_encoding/assemble_protocol_A_pooled_maps.py \
-  --run-root "${RUN_ROOT_PATH}"
+  --run-root "${RUN_ROOT_PATH}" \
+  --skip-existing
 
 if (( FAIL )); then
   echo "WARNING: one or more leaves incomplete; maps may be partial."

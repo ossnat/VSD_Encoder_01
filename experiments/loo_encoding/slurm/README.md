@@ -80,7 +80,8 @@ DRY_RUN_SUBMIT=1 bash experiments/loo_encoding/slurm/submit_full_protocol_A.sh
 |------:|--------|------|
 | 0 | `00_prepare.slurm` | Dry-run 4 leaves → `params.yaml`, `folds_index.yaml`, `folds.txt`, `pipeline_manifest.yaml` |
 | 1 | `01_encode_array.slurm` | Array: `run_loo_encoding.py --fold-id … --array-worker --no-save-model` (models not saved by default to avoid quota blowups) |
-| 2 | `02_finalize_and_maps.slurm` | `finalize_loo_leaf.py` + triplet overviews + pooled encoding r maps |
+| 2 | `02_finalize_and_maps.slurm` | `finalize_loo_leaf.py` + triplet overviews + pooled encoding r maps (`--skip-existing`) |
+| 2b | `02b_pooled_maps_raw.slurm` | Optional: pooled maps for **raw** leaves only (parallel with zscore) |
 | 3 | `03_noise_corr.slurm` | `compute_fold_noise_corr_odd_even.py` → `noise_corr_odd_even/` |
 | 4 | `04_report.slurm` | `build_protocol_A_report_pdf.py` → `report.pdf` |
 
@@ -153,6 +154,7 @@ Noise = odd/even trial means per fold, same pooling (all trials; no clean filter
 | `00_prepare.slurm` | Stage 0 |
 | `01_encode_array.slurm` | Stage 1 array worker |
 | `02_finalize_and_maps.slurm` | Stage 2 |
+| `02b_pooled_maps_raw.slurm` | Stage 2b — raw pooled maps only (optional parallel) |
 | `03_noise_corr.slurm` | Stage 3 |
 | `04_report.slurm` | Stage 4 |
 | `logs/` | SLURM stdout/stderr (created on submit) |

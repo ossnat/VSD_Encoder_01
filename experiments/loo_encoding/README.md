@@ -36,7 +36,7 @@ ROI review is **done**. Frozen boxes live in `rois/` (window-independent).
 | `configs/windows/evoked_35_43.yaml` | Frames `[35, 43)` exclusive end |
 | `sanity_and_roi_overview.pdf` | Overview PDF |
 
-### Flat results layout (default for new runs)
+## Flat results layout (default for new runs)
 
 New LOO runs write under a short shared root so raw vs zscore (and A vs B)
 are **sibling leaves**, not separate deep trees:
@@ -71,6 +71,25 @@ experiments/loo_encoding/runs/
 Overview tools (`make_loo_triplet_overview.py`, pooled pixel-r plots, replot)
 take an explicit `--protocol-dir` and work for **both** flat leaves and old
 deep dirs — pass the leaf/protocol directory path.
+
+### Full Protocol A on SLURM (cluster)
+
+Massive all-fold Protocol A (zscore/raw × clean/all + odd/even noise + PDF):
+
+See **`experiments/loo_encoding/slurm/README.md`**.
+
+```bash
+# Path dry-run (safe on laptop)
+scripts/py experiments/loo_encoding/prepare_protocol_A_pipeline.py \
+  --config experiments/loo_encoding/slurm/protocol_A_full.yaml --paths-only
+
+# On cluster:
+PARTITION=generic RUN_DATE=2026-08-07 \
+  bash experiments/loo_encoding/slurm/submit_full_protocol_A.sh
+```
+
+Array workers use `--array-worker` so concurrent fold jobs do not race on
+leaf-level `folds_index.yaml` / `loo_summary.csv`.
 
 ## Decisions (locked)
 

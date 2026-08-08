@@ -6,10 +6,11 @@
 #   experiments/**/README.md, STATUS.md, comments/*.md  (orientation / notes)
 #   experiments/**/heldout_list.yaml  (experimental-design source of truth)
 #   experiments/loo_encoding/*.py, slurm/protocol_A*.yaml  (LOO cluster pipeline)
+#   experiments/noise_ceiling_roi/nc_roi_utils.py  (shared NC helpers used by LOO)
 #   experiments/noise_ceiling_roi/rois/global_noise_ceiling_hull__mask.npy
 #
 # IGNORE (local / regenerable):
-#   experiments/**/*.py       (scripts that generate figures/reports; except LOO pipeline)
+#   experiments/**/*.py       (scripts that generate figures/reports; except LOO / NC utils)
 #   figures, plots, PDFs, CSVs, JSON/YAML ROIs, npy/joblib/npz
 #   generated experiment report .md (except README/STATUS/comments)
 #   experiments/**/runs/, experiments/**/models/, experiment logs
@@ -54,6 +55,7 @@ experiments/**/*.yml
 # Experiment scripts that create figures/reports
 experiments/**/*.py
 !experiments/loo_encoding/*.py
+!experiments/noise_ceiling_roi/nc_roi_utils.py
 
 # Generated experiment markdown reports; keep orientation + human review notes
 experiments/**/*.md

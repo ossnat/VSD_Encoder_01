@@ -1,0 +1,20 @@
+---
+description: Never stage, commit, or push unless the user explicitly asks in that message
+alwaysApply: true
+---
+
+# Manual git staging and commits
+
+User rules already say: commit only when requested. This rule hardens that preference for this workspace.
+
+## Hard requirements
+
+- **NEVER** run `git add`, `git commit`, or `git push` unless the user **explicitly** asks to stage, commit, or push **in that message** (e.g. "commit", "push", "stage these").
+- Implementing a fix or making code changes is fine. Leave those changes **unstaged and uncommitted** so the user can review and stage manually.
+- Do **not** instruct subagents to commit or push either.
+- Do **not** "helpfully" stage or commit after finishing work, even if the change looks complete.
+
+## Allowed without an explicit ask
+
+- Read-only git inspection (`git status`, `git diff`, `git log`, etc.) when useful for the task.
+- Creating or editing files as requested (leave them for the user to stage).

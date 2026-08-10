@@ -1,0 +1,32 @@
+---
+description: Prefer cheap intermediate artifacts and explicit time↔space tradeoffs in multi-stage ML/scientific pipelines
+alwaysApply: true
+---
+
+# Pipeline efficiency (time ↔ space)
+
+When designing or changing multi-stage scientific/ML pipelines, optimize for **avoiding accidental recomputation**, not for micro-optimizing hot loops.
+
+## Prefer unlock artifacts over redo
+
+- If a **small intermediate artifact** would unlock a later stage, prefer saving it over redoing expensive work (full retrain, full re-inference, full re-encode).
+- Explicitly consider and suggest **time ↔ space** tradeoffs: wall time vs disk, recompute vs store, resume vs restart.
+
+## Batch / cluster jobs
+
+- Account for **wall-time limits**, **disk quota**, and **resume / skip-existing** behavior.
+- Design stages so a failed or partial run can continue without replaying completed expensive steps.
+
+## Avoid O(stages) × full redo
+
+- Do **not** accidentally force **O(stages) × full retrain / re-inference** when a later stage only needs a summary.
+- Save **cheap summaries** (means, scalars, small maps, metadata) when a downstream stage needs them.
+
+### Example (encode vs pooled maps)
+
+Per-fold encode/train is expensive; a later pooled-map stage may only need tiny **fold-mean** summaries. Prefer writing those once during encode over refitting ridge (or re-running encode) later just to rebuild them. Same pattern applies beyond LOO: any leave-one-out / CV / multi-seed stage should persist what the next stage actually consumes.
+
+## What not to do by default
+
+- Do **not** micro-optimize hot loops unless profiling shows a real bottleneck.
+- **Do** flag recomputation hazards, repeated full I/O passes, and disk-quota risks when proposing pipeline changes.

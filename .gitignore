@@ -7,6 +7,7 @@
 #   experiments/**/heldout_list.yaml  (experimental-design source of truth)
 #   experiments/loo_encoding/*.py, slurm/protocol_A*.yaml  (LOO cluster pipeline)
 #   experiments/noise_ceiling_roi/nc_roi_utils.py  (shared NC helpers used by LOO)
+#   experiments/schira2007/*.py  (Schira Phase 0 driver)
 #   experiments/noise_ceiling_roi/rois/global_noise_ceiling_hull__mask.npy
 #
 # IGNORE (local / regenerable):
@@ -56,6 +57,7 @@ experiments/**/*.yml
 experiments/**/*.py
 !experiments/loo_encoding/*.py
 !experiments/noise_ceiling_roi/nc_roi_utils.py
+!experiments/schira2007/*.py
 
 # Generated experiment markdown reports; keep orientation + human review notes
 experiments/**/*.md

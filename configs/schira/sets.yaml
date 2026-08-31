@@ -1,0 +1,64 @@
+# Named Schira + camera-affine parameter sets.
+#
+# Select with:
+#   scripts/py experiments/schira2007/run_phase_0.py --set 201118
+#   scripts/py experiments/schira2007/run_phase_0.py \
+#     --schira-config configs/schira/sets.yaml --set 201118
+#
+# Add another imaging day as a new key under `sets:` (copy 201118 and edit).
+# A standalone single-set YAML (top-level `schira:` / `affine:`) is also accepted.
+
+default_set: 201118
+
+sets:
+  # Calendar 20/11/2018 → repo prefix 201118 (letters a/c/d; b excluded).
+  "201118":
+    date_prefix: "201118"
+    csv_date: "20/11/2018"
+    schira:
+      a: 0.72
+      alpha: 1.5
+      k: 1.0
+      # Schira 2007 eq.5: fa = sech(P) ** (sech{log(E/a)*S1} * S2)
+      # (second sech and *S2 are superscript in the PDF). S1=0.76, S2≈0.18.
+      shear: double_sech
+      fa_combine: power
+      sech_ecc_k: 0.76
+      sech_amp: 0.1821
+    # Camera affine from landmark registration on letter_F_white_1 (201118).
+    # Source: experiments/schira2007/phase_0_register/affine_fit__201118__letter_F_white_1.yaml
+    # (landmarks__201118__letter_F_white_1.yaml; re-pick 2026-08-26 22:37).
+    # Fit: n=4 landmarks, rmsd≈8.66 px, flip_u=true. Schira (a,α,k,fa) held fixed.
+    # Prior pick (n=5, rmsd≈9.58) backed up as *_prev.yaml.
+    # origin_xy is (col, row) of the fovea w = k log(a). k=1 → mm scale is in ppu.
+    affine:
+      needs_confirmation: false
+      origin_xy: [-5.90836181632753, 22.878432895128505]
+      pixels_per_unit: 53.676406289148666
+      rotation_deg: 130.0061123284688
+      flip_u: true
+      flip_v: false
+
+  # Calendar 10/07/2018 → repo prefix 100718 (sessions a,b in catalog).
+  # Phase 0 has NOT been run for this set.
+  "100718":
+    date_prefix: "100718"
+    csv_date: "10/7/2018"
+    schira:
+      a: 0.74
+      alpha: 1.0
+      k: 1.0
+      shear: double_sech
+      fa_combine: power
+      sech_ecc_k: 0.76
+      # Same sech_amp choice as 201118 (see comment there).
+      sech_amp: 0.1821
+    # Placeholder only — do not treat as a fitted 100718 affine. Not updated
+    # with the 201118 VSD-peak alignment above.
+    affine:
+      needs_confirmation: true
+      origin_xy: [50.0, 20.0]
+      pixels_per_unit: 45.0
+      rotation_deg: 0.0
+      flip_u: false
+      flip_v: false

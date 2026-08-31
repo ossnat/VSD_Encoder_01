@@ -7,10 +7,12 @@ Resolve CLI aliases such as ``none``, ``disk``, ``box_union``,
 The global noise-ceiling hull mask is the across-condition **naive** (magenta)
 convex hull at thr=0.90 (``r >= 0.90``), installed at
 ``NOISE_CEILING_HULL_MASK_RELPATH``. That artifact is built with the NC ROI
-``--window`` (currently ``win_0035_0042`` raw) and is **independent** of the
-LOO / ridge analysis window — analysis uses its own config and simply loads
-the installed mask. Selecting ``noise_ceiling_hull`` raises a clear error if
-the file is missing.
+``--window`` (currently ``win_0035_0046`` raw, frames 35–45 inclusive) and is
+**independent** of the LOO / ridge analysis window — analysis uses its own
+config and simply loads the installed mask. Switch hulls by reinstalling
+this file (NC ROI ``--window``) or by passing an explicit ``--loss-roi``
+path. Selecting ``noise_ceiling_hull`` raises a clear error if the file is
+missing.
 """
 
 from __future__ import annotations
@@ -33,7 +35,8 @@ BOX_UNION_MASK_RELPATH = Path(
     "experiments/loo_encoding/roi_compare/union_of_boxes__mask.npy"
 )
 # Official global noise-ceiling hull (naive / magenta across-condition thr0.90).
-# Built via NC ROI --window (win_0035_0042); independent of LOO window.
+# Built via NC ROI --window (win_0035_0046 / frames 35–45); independent of LOO
+# --window. LOO loads this installed alias; it is not hardcoded in ridge.
 NOISE_CEILING_HULL_MASK_RELPATH = Path(
     "experiments/noise_ceiling_roi/rois/global_noise_ceiling_hull__mask.npy"
 )
@@ -94,7 +97,7 @@ def protocol_dir_suffix(
     mask_path: Path | None = None,
 ) -> str | None:
     """
-    Protocol-dir suffix after ``protocol_{A,B}``.
+    Protocol-dir suffix after ``protocol_{A,B,C}``.
 
     Returns ``None`` for full-frame (``none``) so the dir stays ``protocol_B``.
     Named modes use a stable token (``disk``, ``box_union``, …).

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Sequence
 
 import numpy as np
 import pandas as pd
@@ -12,14 +13,14 @@ import yaml
 
 from src.stimuli.identity import attach_stimulus_ids
 
-Protocol = Literal["A", "B"]
+Protocol = Literal["A", "B", "C"]
 
 
 DEFAULT_HELDOUT = [
     "white_point_0.1",
     "black_triangle_contour_0.4",
-    "black_bar_vertical_0.3",
     "black_bar_vertical_1",
+    "black_bar_horizontal_1",
     "letter_A_white_1",
     "letter_D_white_1",
     "letter_F_white_1",
@@ -46,17 +47,94 @@ class FoldSpec:
         return asdict(self)
 
 
-def load_heldout_list(path: Path | None) -> list[str]:
+@dataclass(frozen=True)
+class HeldoutConfig:
+    """Held-out stimulus ids plus optional train-only session dates."""
+
+    stimulus_ids: list[str]
+    train_only_sessions: list[str]
+
+
+def load_heldout_config(path: Path | None) -> HeldoutConfig:
+    """
+    Load a held-out YAML (or the built-in default list).
+
+    Dict keys:
+      ``heldout_stimulus_ids`` / ``heldouts`` — ids or glob patterns
+        (e.g. ``letter_*``), expanded later against encoding-pair ids.
+      ``train_only_sessions`` / ``train_only_dates`` — session dates that
+        may appear in train/val but must not become Protocol A/C test folds.
+    A bare YAML list is treated as stimulus ids only.
+    """
     if path is None:
-        return list(DEFAULT_HELDOUT)
+        return HeldoutConfig(list(DEFAULT_HELDOUT), [])
     with path.open() as f:
         data = yaml.safe_load(f)
     if isinstance(data, list):
-        return [str(x) for x in data]
+        return HeldoutConfig([str(x) for x in data], [])
     if isinstance(data, dict):
         items = data.get("heldout_stimulus_ids") or data.get("heldouts") or []
-        return [str(x) for x in items]
+        train_only = (
+            data.get("train_only_sessions") or data.get("train_only_dates") or []
+        )
+        return HeldoutConfig(
+            [str(x) for x in items],
+            [str(x) for x in train_only],
+        )
     raise ValueError(f"Unrecognized held-out list format: {path}")
+
+
+def load_heldout_list(path: Path | None) -> list[str]:
+    return load_heldout_config(path).stimulus_ids
+
+
+_GLOB_CHARS = frozenset("*?[")
+
+
+def expand_stimulus_id_patterns(
+    patterns: Sequence[str],
+    available_ids: Sequence[str],
+) -> list[str]:
+    """
+    Expand glob patterns (e.g. ``letter_*``) against available stimulus ids.
+
+    Exact ids (no glob characters) pass through even if currently missing;
+    fold builders skip empty stimuli. A glob that matches nothing raises.
+    """
+    available = [str(x) for x in available_ids if x]
+    out: list[str] = []
+    seen: set[str] = set()
+    for pat in patterns:
+        token = str(pat)
+        if any(ch in token for ch in _GLOB_CHARS):
+            hits = sorted(sid for sid in available if fnmatch(sid, token))
+            if not hits:
+                raise ValueError(
+                    f"No stimulus_id matched pattern {token!r} "
+                    f"(available n={len(available)})"
+                )
+        else:
+            hits = [token]
+        for sid in hits:
+            if sid not in seen:
+                seen.add(sid)
+                out.append(sid)
+    return out
+
+
+def filter_folds_excluding_train_only_dates(
+    folds: list[tuple[FoldSpec, pd.DataFrame]],
+    train_only_dates: Sequence[str],
+) -> list[tuple[FoldSpec, pd.DataFrame]]:
+    """Drop folds whose ``heldout_date`` is a train-only session."""
+    skip = {str(d) for d in train_only_dates if str(d).strip()}
+    if not skip:
+        return folds
+    return [
+        (spec, fold_df)
+        for spec, fold_df in folds
+        if spec.heldout_date is None or str(spec.heldout_date) not in skip
+    ]
 
 
 def _inner_train_val_split(
@@ -165,6 +243,34 @@ def audit_protocol_b_leakage(
     if n_leak:
         return False, f"stimulus_id leakage into train/val: n={n_leak}"
     return True, "no stimulus_id in train/val"
+
+
+def audit_protocol_c_leakage(
+    fold_df: pd.DataFrame,
+    heldout_stimulus_id: str,
+    *,
+    heldout_date: str,
+    heldout_condition: str,
+) -> tuple[bool, str]:
+    """
+    Protocol C leakage check: test is the held-out (date, condition); train/val
+    must not contain that group and must not contain any trial with the
+    held-out stimulus_id (other sessions of the same stimulus are excluded).
+    """
+    ok_keys, note_keys = audit_protocol_a_leakage(fold_df, heldout_stimulus_id)
+    if not ok_keys:
+        return False, note_keys
+    ok_stim, note_stim = audit_protocol_b_leakage(fold_df, heldout_stimulus_id)
+    if not ok_stim:
+        return False, note_stim
+    test = fold_df[fold_df["loo_split"] == "test"]
+    test_keys = set(
+        zip(test["date"].astype(str), test["condition"].astype(str))
+    )
+    expected = {(str(heldout_date), str(heldout_condition))}
+    if test_keys != expected:
+        return False, f"test keys {sorted(test_keys)} != {sorted(expected)}"
+    return True, "no stimulus_id in train/val; test is held-out (date,condition)"
 
 
 def build_protocol_a_folds(
@@ -285,6 +391,95 @@ def build_protocol_b_folds(
             notes=note,
         )
         folds.append((spec, fold_df))
+    return folds
+
+
+PROTOCOL_C_TEST_SELECTION_RULE = (
+    "One fold per held-out stimulus_id. Test is a single (date, condition) "
+    "chosen as the first row after sorting groups by (date, condition). "
+    "Identical stimulus instances share the same y_hat; other sessions of the "
+    "held-out stimulus are omitted from the fold (not test)."
+)
+
+
+def _pick_protocol_c_test_group(stim: pd.DataFrame) -> tuple[str, str]:
+    """Return the single (date, condition) used as Protocol C test."""
+    groups = (
+        stim[["date", "condition"]]
+        .drop_duplicates()
+        .sort_values(["date", "condition"])
+    )
+    if groups.empty:
+        raise ValueError("stimulus has no (date, condition) groups")
+    row = groups.iloc[0]
+    return str(row["date"]), str(row["condition"])
+
+
+def build_protocol_c_folds(
+    pairs: pd.DataFrame,
+    heldout_ids: list[str],
+    *,
+    val_fraction: float = 0.2,
+    seed: int = 17,
+    all_sessions: bool = False,
+) -> list[tuple[FoldSpec, pd.DataFrame]]:
+    """
+    Protocol C — condition LOO without same-stimulus train contamination.
+
+    Default: **one fold per held-out stimulus_id** (~20 folds). Test is one
+    ``(date, condition)`` per stimulus (see ``PROTOCOL_C_TEST_SELECTION_RULE``).
+    Train/val exclude *all* trials with the held-out ``stimulus_id``.
+
+    Set ``all_sessions=True`` to restore legacy behavior (one fold per held-out
+    ``(date, condition)`` of each stimulus, matching Protocol A fold count).
+    """
+    df = attach_stimulus_ids(pairs)
+    folds: list[tuple[FoldSpec, pd.DataFrame]] = []
+    for i, sid in enumerate(heldout_ids):
+        stim = df[df["stimulus_id"] == sid]
+        if stim.empty:
+            continue
+        groups = (
+            stim[["date", "condition"]]
+            .drop_duplicates()
+            .sort_values(["date", "condition"])
+        )
+        if all_sessions:
+            iter_groups = [
+                (str(r.date), str(r.condition))
+                for r in groups.itertuples(index=False)
+            ]
+        else:
+            iter_groups = [_pick_protocol_c_test_group(stim)]
+        for j, (date, condition) in enumerate(iter_groups):
+            test = df[(df["date"] == date) & (df["condition"] == condition)].copy()
+            rem = df[df["stimulus_id"] != sid].copy()
+            train, val = _inner_train_val_split(
+                rem, val_fraction=val_fraction, seed=seed + i + j
+            )
+            fold_df = _assign_loo_split(train, val, test)
+            fold_id = f"C__{sid}__{date}_{condition}"
+            ok, note = audit_protocol_c_leakage(
+                fold_df,
+                sid,
+                heldout_date=date,
+                heldout_condition=condition,
+            )
+            if not all_sessions:
+                note = f"{note}; {PROTOCOL_C_TEST_SELECTION_RULE}"
+            spec = FoldSpec(
+                protocol="C",
+                fold_id=fold_id,
+                heldout_stimulus_id=sid,
+                heldout_date=date,
+                heldout_condition=condition,
+                n_train=int((fold_df["loo_split"] == "train").sum()),
+                n_val=int((fold_df["loo_split"] == "val").sum()),
+                n_test=int((fold_df["loo_split"] == "test").sum()),
+                leakage_ok=ok,
+                notes=note,
+            )
+            folds.append((spec, fold_df))
     return folds
 
 

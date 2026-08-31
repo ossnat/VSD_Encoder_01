@@ -95,8 +95,8 @@ def test_parse_contrast_and_letters(tmp_path: Path):
         ]
     )
     specs = parse_contrast_letters_rows(df, monkey="gandalf", letters_root=letters)
-    # 6 contrast (skip blank+error); 201118a letters excluded (bad frames).
-    assert len(specs) == 6
+    # 6 contrast (skip blank+error) + 6 letters on 201118a; control-attention skipped.
+    assert len(specs) == 12
 
     contrast = [s for s in specs if s.h5_session == "230518b"]
     assert len(contrast) == 6
@@ -116,7 +116,8 @@ def test_parse_contrast_and_letters(tmp_path: Path):
     assert all(s.rgb is not None and s.rgb[0] >= 186 for s in contrast)
 
     letters_specs = [s for s in specs if s.h5_session == "201118a"]
-    assert len(letters_specs) == 0
+    assert len(letters_specs) == 6
+    assert {s.letter for s in letters_specs} == set("GANDFL")
 
     image = render_stimulus(contrast[0], RenderConfig())
     assert image.shape == (224, 224, 3)

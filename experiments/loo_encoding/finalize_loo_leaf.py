@@ -26,6 +26,7 @@ import pandas as pd
 import yaml
 
 from experiments.loo_encoding.make_loo_triplet_overview import write_overview_batches
+from src.loo.paths import list_loo_fold_dirs
 from src.paths import project_root
 
 
@@ -35,11 +36,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 
 def _fold_dirs(protocol_dir: Path) -> list[Path]:
-    return sorted(
-        p
-        for p in protocol_dir.iterdir()
-        if p.is_dir() and p.name.startswith(("A__", "B__"))
-    )
+    return list_loo_fold_dirs(protocol_dir)
 
 
 def _fold_artifacts_complete(fold_dir: Path) -> bool:
@@ -101,7 +98,8 @@ def finalize_leaf(
     protocol_dir: Path,
     *,
     make_overview: bool = False,
-    overview_per_page: int = 8,
+    overview_per_page: int = 24,
+    overview_inclusive: bool = False,
 ) -> dict[str, Any]:
     protocol_dir = protocol_dir.resolve()
     index_path = protocol_dir / "folds_index.yaml"
@@ -164,6 +162,7 @@ def finalize_leaf(
             protocol_dir,
             per_page=overview_per_page,
             alias="all_folds_triplets.png",
+            inclusive=bool(overview_inclusive),
         )
         overview_paths = [str(p) for p in written]
 
@@ -191,7 +190,24 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Also write overview/ triplet batch PNGs",
     )
-    p.add_argument("--overview-per-page", type=int, default=8)
+    p.add_argument(
+        "--overview-per-page",
+        type=int,
+        default=24,
+        help=(
+            "Fold rows per overview page (default: 24 so typical B/C leaves "
+            "fit on one inclusive all_folds_triplets.png). SLURM Protocol A "
+            "passes 8."
+        ),
+    )
+    p.add_argument(
+        "--overview-inclusive",
+        action="store_true",
+        help=(
+            "Force every fold onto a single all_folds_triplets.png page "
+            "(overrides --overview-per-page)."
+        ),
+    )
     return p.parse_args(argv)
 
 
@@ -207,6 +223,7 @@ def main(argv: list[str] | None = None) -> int:
         protocol_dir,
         make_overview=bool(args.make_overview),
         overview_per_page=args.overview_per_page,
+        overview_inclusive=bool(args.overview_inclusive),
     )
     print(yaml.safe_dump(result, sort_keys=False))
     if result["n_incomplete"]:

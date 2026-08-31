@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
-from sklearn.linear_model import RidgeCV
+from sklearn.linear_model import Ridge, RidgeCV
 from sklearn.preprocessing import StandardScaler
 
 from src.DL_features.schema import stimulus_key, stimulus_map_path
@@ -252,6 +252,56 @@ def fit_ridge_encoder(
         model=model,
         scaler=scaler,
         alpha=alpha_value,
+        spatial_size=spatial_size or (0, 0),
+        feature_layer="",
+        model_slug="",
+        alpha_per_target=alpha_per_target,
+        target_mask=mask_arr,
+        target_pixel_indices=indices,
+    )
+
+
+def fit_ridge_fixed_alphas(
+    x_train: np.ndarray,
+    y_train: np.ndarray,
+    alphas: np.ndarray,
+    *,
+    standardize_features: bool,
+    target_mask: np.ndarray | None = None,
+    spatial_size: tuple[int, int] | None = None,
+) -> RidgeEncodeResult:
+    """Fit multi-output Ridge with pre-selected alphas (no CV / RidgeCV).
+
+    Used to replot or pool from saved ``alphas_per_target.npy`` without
+    repeating expensive alpha search.
+    """
+    scaler: StandardScaler | None = None
+    x_fit = x_train
+    if standardize_features:
+        scaler = StandardScaler()
+        x_fit = scaler.fit_transform(x_train)
+
+    indices: np.ndarray | None = None
+    mask_arr: np.ndarray | None = None
+    y_fit = y_train
+    if target_mask is not None:
+        if spatial_size is None:
+            raise ValueError("spatial_size is required when target_mask is set")
+        mask_arr = np.asarray(target_mask, dtype=bool)
+        indices = flatten_target_mask(mask_arr, spatial_size)
+        y_fit = select_target_pixels(y_train, indices)
+
+    alpha_arr = np.asarray(alphas, dtype=np.float64).ravel()
+    alpha_per_target = alpha_arr.size > 1
+    model = Ridge(
+        alpha=alpha_arr if alpha_per_target else float(alpha_arr.reshape(-1)[0]),
+        fit_intercept=True,
+    )
+    model.fit(x_fit, y_fit)
+    return RidgeEncodeResult(
+        model=model,
+        scaler=scaler,
+        alpha=alpha_arr if alpha_per_target else float(alpha_arr.reshape(-1)[0]),
         spatial_size=spatial_size or (0, 0),
         feature_layer="",
         model_slug="",

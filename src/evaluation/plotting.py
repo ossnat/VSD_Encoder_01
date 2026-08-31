@@ -29,6 +29,48 @@ def _shared_limits(images: list[np.ndarray]) -> tuple[float, float]:
     return lo, hi
 
 
+def _disable_colorbar_offset(cbar) -> None:
+    """Print 1.000x on the bar, not 0.000x with a matplotlib '+1' offset."""
+    formatter = getattr(cbar, "formatter", None)
+    if formatter is not None and hasattr(formatter, "set_useOffset"):
+        formatter.set_useOffset(False)
+        if hasattr(formatter, "set_scientific"):
+            formatter.set_scientific(False)
+        cbar.update_ticks()
+        return
+    from matplotlib.ticker import ScalarFormatter
+
+    axis = cbar.ax.yaxis if getattr(cbar, "orientation", "vertical") == "vertical" else cbar.ax.xaxis
+    fmt = ScalarFormatter(useOffset=False)
+    fmt.set_scientific(False)
+    axis.set_major_formatter(fmt)
+
+
+def shared_orig_recon_residual_clims(
+    orig_maps: list[np.ndarray],
+    recon_maps: list[np.ndarray],
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Run-wide orig/recon 1–99% clim and a symmetric residual clim.
+
+    Residual is **not** tied to the F/F0 orig/recon range (raw residuals are
+    ~10⁻³–10⁻⁴ while orig/recon sit near 1).
+    """
+    orig_recon = _shared_limits(
+        [np.asarray(m) for m in list(orig_maps) + list(recon_maps)]
+    )
+    diffs = [
+        np.asarray(r, dtype=np.float64) - np.asarray(o, dtype=np.float64)
+        for o, r in zip(orig_maps, recon_maps)
+    ]
+    if not diffs:
+        return orig_recon, (-1.0, 1.0)
+    abs_diff = np.concatenate([np.abs(d.ravel()) for d in diffs])
+    finite = abs_diff[np.isfinite(abs_diff)]
+    diff_lim = float(np.percentile(finite, 99)) if finite.size else 1.0
+    diff_lim = diff_lim if diff_lim > 1e-8 else 1.0
+    return orig_recon, (-diff_lim, diff_lim)
+
+
 def plot_pixel_correlation_heatmap(
     corr_map: np.ndarray,
     output_path: Path,
@@ -113,6 +155,48 @@ def plot_pixel_r2_heatmap(
     )
 
 
+def _pixel_mean_map_clims(
+    mean_original: np.ndarray,
+    mean_reconstruction: np.ndarray,
+    mean_diff: np.ndarray,
+    *,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    residual_vmin: float | None = None,
+    residual_vmax: float | None = None,
+) -> tuple[tuple[float, float], tuple[float, float], tuple[float, float]]:
+    """Return ``(orig_clim, recon_clim, residual_clim)``.
+
+    Default: independent 1–99% percentiles for orig and recon so identical
+    ``y_hat`` keeps the same recon appearance across sessions. Residual uses
+    its own symmetric scale. If both ``vmin`` and ``vmax`` are set, orig and
+    recon share that fixed scale (residual still independent unless
+    ``residual_vmin`` / ``residual_vmax`` are also set).
+    """
+    if (vmin is None) != (vmax is None):
+        raise ValueError("vmin and vmax must both be provided or both omitted")
+    if (residual_vmin is None) != (residual_vmax is None):
+        raise ValueError(
+            "residual_vmin and residual_vmax must both be provided or both omitted"
+        )
+    if vmin is not None:
+        shared = (float(vmin), float(vmax))
+        orig_clim = shared
+        recon_clim = shared
+    else:
+        orig_clim = _shared_limits([np.asarray(mean_original)])
+        recon_clim = _shared_limits([np.asarray(mean_reconstruction)])
+    if residual_vmin is not None:
+        resid_clim = (float(residual_vmin), float(residual_vmax))
+    else:
+        abs_diff = np.abs(np.asarray(mean_diff, dtype=np.float64))
+        finite = abs_diff[np.isfinite(abs_diff)]
+        diff_lim = float(np.percentile(finite, 99)) if finite.size else 1.0
+        diff_lim = diff_lim if diff_lim > 1e-8 else 1.0
+        resid_clim = (-diff_lim, diff_lim)
+    return orig_clim, recon_clim, resid_clim
+
+
 def plot_pixel_mean_maps(
     mean_original: np.ndarray,
     mean_reconstruction: np.ndarray,
@@ -120,30 +204,128 @@ def plot_pixel_mean_maps(
     output_path: Path,
     *,
     title: str,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    residual_vmin: float | None = None,
+    residual_vmax: float | None = None,
+    cmap: str | None = None,
 ) -> Path:
     """Side-by-side trial-mean original, reconstruction, and difference maps.
 
-    Orig/recon share a color scale anchored on the **original** map only.
-    Sharing percentiles with a badly scaled reconstruction (common for weak
-    held-out encoders on raw F/F₀ ≈ 1) expands clim by tens of × and washes
-    out the original — so the same window's originals would look different
-    across models. Residual keeps its own symmetric scale.
+    Default colormap is ``VSD_CMAP`` (``mapgeog``). Pass ``cmap="mapgeog_gray"``
+    for the project grayscale analog. Orig uses 1–99% percentiles of
+    the original (sessions may differ). Recon uses **recon-only** percentiles
+    so identical ``y_hat`` looks the same across folds (e.g. Protocol C
+    100718a vs b). Residual keeps its own symmetric scale.
+
+    Pass both ``vmin`` and ``vmax`` to force a shared fixed scale on orig and
+    recon for run-wide comparison. Residual is never tied to that scale;
+    pass ``residual_vmin`` / ``residual_vmax`` to share a residual clim
+    across folds. Colorbars disable matplotlib offset notation so F/F0 ≈ 1
+    prints as 1.000x, not 0.000x + 1.
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig, axes = plt.subplots(1, 3, figsize=(11, 3.8))
+    cmap_name = cmap or VSD_CMAP
 
-    vmin, vmax = _shared_limits([mean_original])
-    diff_lim = float(np.nanpercentile(np.abs(mean_diff), 99))
-    diff_lim = diff_lim if diff_lim > 1e-8 else 1.0
-
+    orig_clim, recon_clim, resid_clim = _pixel_mean_map_clims(
+        mean_original,
+        mean_reconstruction,
+        mean_diff,
+        vmin=vmin,
+        vmax=vmax,
+        residual_vmin=residual_vmin,
+        residual_vmax=residual_vmax,
+    )
     panels = [
-        (mean_original, "Trial-mean original", VSD_CMAP, vmin, vmax),
-        (mean_reconstruction, "Trial-mean reconstruction", VSD_CMAP, vmin, vmax),
-        (mean_diff, "Mean recon − original", VSD_CMAP, -diff_lim, diff_lim),
+        (mean_original, "Trial-mean original", cmap_name, *orig_clim),
+        (mean_reconstruction, "Trial-mean reconstruction", cmap_name, *recon_clim),
+        (mean_diff, "Mean recon − original", cmap_name, *resid_clim),
     ]
-    for ax, (img, subtitle, cmap, lo, hi) in zip(axes, panels):
-        im = ax.imshow(img, cmap=cmap, vmin=lo, vmax=hi)
+    for ax, (img, subtitle, panel_cmap, lo, hi) in zip(axes, panels):
+        im = ax.imshow(img, cmap=panel_cmap, vmin=lo, vmax=hi)
         ax.set_title(subtitle, fontsize=10)
+        ax.axis("off")
+        cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        _disable_colorbar_offset(cbar)
+
+    fig.suptitle(title, fontsize=11)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
+
+
+def _recon_and_orig_trial_clims(
+    mean_reconstruction: np.ndarray,
+    trial_originals: np.ndarray,
+    trial_indices: list[int],
+    *,
+    vmin: float | None = None,
+    vmax: float | None = None,
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Return ``(recon_clim, orig_clim)`` with independent recon scaling."""
+    if (vmin is None) != (vmax is None):
+        raise ValueError("vmin and vmax must both be provided or both omitted")
+    if vmin is not None:
+        orig_clim = (float(vmin), float(vmax))
+    else:
+        sampled = [np.asarray(trial_originals[i]) for i in trial_indices]
+        orig_clim = _shared_limits(sampled)
+    recon_clim = _shared_limits([np.asarray(mean_reconstruction)])
+    return recon_clim, orig_clim
+
+
+def plot_recon_with_sample_trial_originals(
+    mean_reconstruction: np.ndarray,
+    trial_originals: np.ndarray,
+    output_path: Path,
+    *,
+    title: str,
+    n_samples: int = 3,
+    seed: int = 17,
+    vmin: float | None = None,
+    vmax: float | None = None,
+) -> Path:
+    """Reconstruction plus K randomly sampled individual-trial originals.
+
+    Recon uses recon-only percentiles; sampled originals share a separate scale.
+    Residual / diff panel is omitted. ``seed`` fixes trial selection per fold.
+    """
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    n_trials = int(trial_originals.shape[0])
+    n_show = min(max(int(n_samples), 1), n_trials)
+    rng = np.random.default_rng(seed)
+    if n_trials <= n_show:
+        trial_indices = list(range(n_trials))
+    else:
+        trial_indices = sorted(
+            rng.choice(n_trials, size=n_show, replace=False).tolist()
+        )
+
+    recon_clim, orig_clim = _recon_and_orig_trial_clims(
+        mean_reconstruction,
+        trial_originals,
+        trial_indices,
+        vmin=vmin,
+        vmax=vmax,
+    )
+    n_panels = 1 + len(trial_indices)
+    fig, axes = plt.subplots(1, n_panels, figsize=(3.6 * n_panels + 0.5, 3.8))
+    if n_panels == 1:
+        axes = [axes]
+
+    recon_im = axes[0].imshow(
+        mean_reconstruction, cmap=VSD_CMAP, vmin=recon_clim[0], vmax=recon_clim[1]
+    )
+    axes[0].set_title("Reconstruction", fontsize=10)
+    axes[0].axis("off")
+    fig.colorbar(recon_im, ax=axes[0], fraction=0.046, pad=0.04)
+
+    for ax, trial_idx in zip(axes[1:], trial_indices):
+        orig = np.asarray(trial_originals[trial_idx])
+        im = ax.imshow(orig, cmap=VSD_CMAP, vmin=orig_clim[0], vmax=orig_clim[1])
+        ax.set_title(f"Original trial {trial_idx + 1}/{n_trials}", fontsize=10)
         ax.axis("off")
         fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 

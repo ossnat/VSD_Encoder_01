@@ -72,4 +72,8 @@ sbatch slurm/build_encoding_pairs.slurm
 - Only trials from encoder sessions (present in the stimulus catalog) are included.
 - Some `(date, condition)` groups in the split CSV may lack a catalog entry — the build script prints a warning listing them (e.g. `240718a` / `condAN2` when the catalog maps that condition to `240718b`).
 - Duplicate catalog rows for the same `(h5_session, condition)` are deduplicated (non-blank preferred).
-- Sessions **`201118a`** and **`201118b`** (11.20.18) are excluded — only **`201118c`** and **`201118d`** are kept. See `src/stimuli/exclusions.py`.
+- Sessions **`201118b`** (11.20.18, Control-attention) is excluded from catalog
+  and encoding pairs. **`201118a`** letters are included for **training**; do not
+  use that session as a Protocol A/C test fold (`train_only_sessions` /
+  `--train-only-dates`). Letter **test** sessions are **`201118c`** and
+  **`201118d`**. See `src/stimuli/exclusions.py`.

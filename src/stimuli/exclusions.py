@@ -2,10 +2,14 @@
 
 from __future__ import annotations
 
-# 11.20.18 (h5 date prefix 201118): only sessions c and d are usable.
-# - 201118a: bad VSD frames (letters paradigm)
-# - 201118b: excluded; do not use for encoding / catalog
-EXCLUDED_H5_SESSIONS = frozenset({"201118a", "201118b"})
+# 11.20.18 (h5 date prefix 201118):
+# - 201118a: letters paradigm (historically dropped for bad VSD frames).
+#   Re-included in the catalog / encoding pairs so those trials can train;
+#   never use it as a Protocol A/C *test* fold — pass ``--train-only-dates
+#   201118a`` or ``train_only_sessions`` in the held-out YAML.
+# - 201118b: Control-attention (not letters); keep out of encoding / catalog.
+# - 201118c / 201118d: letters; usable as train and as letter test folds.
+EXCLUDED_H5_SESSIONS = frozenset({"201118b"})
 
 # Alias kept for letter-catalog filtering and older call sites.
 EXCLUDED_LETTER_H5_SESSIONS = EXCLUDED_H5_SESSIONS
@@ -35,8 +39,9 @@ def is_excluded_encoding_trial(
     """
     Return True when a trial must not enter training, prediction, or encoding pairs.
 
-    Excludes **all** trials from ``EXCLUDED_H5_SESSIONS`` (currently ``201118a``
-    and ``201118b``). Sessions ``201118c`` / ``201118d`` are kept.
+    Excludes **all** trials from ``EXCLUDED_H5_SESSIONS`` (currently
+    ``201118b``). Sessions ``201118a`` / ``201118c`` / ``201118d`` are kept
+    in pairs; skip ``201118a`` as a *test* fold via train-only dates.
 
     ``condition`` and ``shape_type`` are accepted for call-site compatibility;
     session membership alone decides exclusion.

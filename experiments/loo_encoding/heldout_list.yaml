@@ -1,13 +1,13 @@
 # Held-out stimulus identities for LOO protocols A and B (same list).
-# Missing IDs are skipped at fold-build time.
+# Missing IDs are skipped at fold-build time. Glob patterns (e.g. letter_*)
+# are expanded against encoding-pair stimulus_ids.
 #
-# Full non-blank inventory for win_0035_0043 after 201118a/b exclusion
-# (pairs already omit excluded sessions; blank is never listed).
+# 201118b remains excluded from catalog/pairs (Control-attention, not letters).
+# 201118a letters may be in encoding pairs for *training*; skip them as
+# Protocol A/C test folds via train_only_sessions / --train-only-dates.
 
 heldout_stimulus_ids:
-  - black_bar_horizontal_0.3
   - black_bar_horizontal_1
-  - black_bar_vertical_0.3
   - black_bar_vertical_1
   - black_circle_contour_0.3
   - black_circle_contour_0.95
@@ -25,3 +25,6 @@ heldout_stimulus_ids:
   - white_filled_circle_0.3
   - white_filled_circle_0.8
   - white_point_0.1
+
+train_only_sessions:
+  - 201118a

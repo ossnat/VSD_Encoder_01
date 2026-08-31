@@ -48,12 +48,12 @@ def test_parse_session_block():
             },
         ]
     )
-    specs = parse_stimulus_rows(df, monkey="gandalf", bar_length_deg=0.3)
+    specs = parse_stimulus_rows(df, monkey="gandalf", bar_length_deg=1.0)
     assert len(specs) == 2
     assert specs[0].h5_session == "270618b"
     assert specs[0].condition == "condAN1"
     assert specs[1].shape_type == "bar_vertical"
-    assert specs[1].size_deg == 0.3
+    assert specs[1].size_deg == 1.0
 
 
 def test_parse_bar_length_from_csv():
@@ -77,12 +77,33 @@ def test_parse_bar_length_from_csv():
             },
         ]
     )
-    specs = parse_stimulus_rows(df, monkey="gandalf", bar_length_deg=0.3)
+    specs = parse_stimulus_rows(df, monkey="gandalf", bar_length_deg=1.0)
     assert len(specs) == 2
     assert specs[0].shape_type == "bar_vertical"
     assert specs[0].size_deg == 1.0
     assert specs[1].shape_type == "bar_horizontal"
     assert specs[1].size_deg == 1.0
+
+
+def test_parse_bar_ignores_legacy_0_3_token():
+    """CSV tokens like 0.3deg are remapped; all bars use bar_length_deg (1°)."""
+    df = pd.DataFrame(
+        [
+            {
+                "Monkey": "Gandalf",
+                "Date": "27/6/2018",
+                "Session": "b",
+                "cortex file": "gan_2018_06_27b.1",
+                "stimulus (need to check r/d)": "cond5: black bar vertical 0.3deg",
+                "Stimulus Position": "(0.6,-0.75)",
+            },
+        ]
+    )
+    specs = parse_stimulus_rows(df, monkey="gandalf", bar_length_deg=1.0)
+    assert specs[0].size_deg == 1.0
+    from src.stimuli.identity import stimulus_id_from_row
+
+    assert stimulus_id_from_row(specs[0].__dict__) == "black_bar_vertical_1"
 
 
 def test_parse_multi_session_block_expands_all_letters():
@@ -124,7 +145,7 @@ def test_parse_multi_session_block_expands_all_letters():
             },
         ]
     )
-    specs = parse_stimulus_rows(df, monkey="gandalf", bar_length_deg=0.3)
+    specs = parse_stimulus_rows(df, monkey="gandalf", bar_length_deg=1.0)
 
     july10 = [s for s in specs if s.csv_date == "10/7/2018"]
     assert {(s.h5_session, s.condition) for s in july10} == {

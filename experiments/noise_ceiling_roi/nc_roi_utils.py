@@ -30,11 +30,12 @@ DEFAULT_INVENTORY = (
     / "experiments/loo_encoding/roi_review/stimulus_inventory.csv"
 )
 
-# Convenient default for *ROI creation* only (raw [35, 42)).
+# Convenient default for *ROI creation* only (raw [35, 46) = frames 35–45).
 # This is independent of the LOO / ridge analysis window: pass any window YAML
-# via --window to build the hull on a different evoked range (e.g. 35–46 while
-# encoding stays on 35–42). Normalization follows the chosen window YAML.
-DEFAULT_WINDOW = project_root() / "configs/windows/evoked_35_42.yaml"
+# via --window to build the hull on a different evoked range. Normalization
+# follows the chosen window YAML. Official LOO ``--loss-roi noise_ceiling_hull``
+# is the installed naive thr=0.90 mask from this window unless reinstalled.
+DEFAULT_WINDOW = project_root() / "configs/windows/evoked_35_46.yaml"
 
 # Fixed seed for report shuffle controls (stimulus↔response pairing break).
 DEFAULT_SHUFFLE_SEED = 17
@@ -310,6 +311,36 @@ def pixel_reliability_map(trials: np.ndarray) -> np.ndarray:
     with np.errstate(invalid="ignore", divide="ignore"):
         corr = num / denom
     return corr.astype(np.float32)
+
+
+def pixel_r2_reliability_map(trials: np.ndarray) -> np.ndarray:
+    """
+    Per-pixel R² between odd- and even-index trial vectors.
+
+    At each pixel, treat the even half as predictions of the odd half (trimmed to
+    ``min(n_odd, n_even)``). Same split convention as ``pixel_reliability_map``.
+    """
+    if trials.ndim != 3:
+        raise ValueError(f"Expected (T, H, W), got {trials.shape}")
+
+    a = trials[0::2].astype(np.float64)
+    b = trials[1::2].astype(np.float64)
+    n = min(a.shape[0], b.shape[0])
+    h, w = trials.shape[1], trials.shape[2]
+    if n == 0:
+        return np.full((h, w), np.nan, dtype=np.float32)
+
+    a = a[:n]
+    b = b[:n]
+    with np.errstate(all="ignore"):
+        a_mean = np.nanmean(a, axis=0, keepdims=True)
+    ss_tot = np.nansum((a - a_mean) ** 2, axis=0)
+    ss_res = np.nansum((a - b) ** 2, axis=0)
+    n_finite = np.sum(np.isfinite(a) & np.isfinite(b), axis=0)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        r2 = 1.0 - ss_res / ss_tot
+    r2 = np.where(n_finite > 0, r2, np.nan)
+    return r2.astype(np.float32)
 
 
 def global_split_half_r(trials: np.ndarray) -> tuple[float, float, int, int]:

@@ -3,15 +3,17 @@
 Layout::
 
     experiments/loo_encoding/runs/
-      YYYY-MM-DD_{start}-{end}_{model}_{layer}/   # run root
-        protocol_{A|B}_{zscore|raw}_{ROI}_{clean|all}/  # leaf
+      YYYY-MM-DD_{start}-{end}_{model}_{layer}_{zscore|raw}/   # run root
+        protocol_{A|B|C}_{zscore|raw}_{ROI}_{clean|all}/      # leaf
           params.yaml
           folds_index.yaml
           loo_summary.csv
           <fold_id>/...
 
 Historical deep trees (``runs/<window_id>/<model>/<layer>/protocol_*/``)
-remain readable; new runs default to this flat layout.
+remain readable; new runs default to this flat layout. Older untagged
+run roots (``…_resnet18_l3`` without ``_zscore``/``_raw``) are still
+valid when passed via ``--run-root``.
 """
 
 from __future__ import annotations
@@ -25,6 +27,16 @@ from typing import Any, Iterable, Sequence
 from src.data.averaging import NORMALIZATION_BASELINE_ZSCORE, resolve_normalization
 
 OUT_ROOT = Path("experiments/loo_encoding/runs")
+LOO_FOLD_ID_PREFIXES = ("A__", "B__", "C__")
+
+
+def list_loo_fold_dirs(protocol_dir: Path) -> list[Path]:
+    """Fold subdirectories named ``A__…`` / ``B__…`` / ``C__…``."""
+    return sorted(
+        p
+        for p in protocol_dir.iterdir()
+        if p.is_dir() and p.name.startswith(LOO_FOLD_ID_PREFIXES)
+    )
 
 # Short ROI tokens for leaf directory names (full detail in params.yaml).
 _ROI_LEAF_TAGS: dict[str, str] = {
@@ -114,20 +126,28 @@ def flat_run_root_name(
     end_frame: int,
     model_slug: str,
     feature_layer: str,
+    normalization: str | None = None,
 ) -> str:
     """
     Run-root directory name.
 
-    Example: ``2026-08-06_35-46_resnet18_l3``
+    Example: ``2026-08-06_35-46_resnet18_l3_zscore``
+
+    ``normalization`` is mapped via ``normalization_leaf_tag`` (``zscore`` /
+    ``raw``). Pass ``None`` only for a shared root that holds both windows
+    (Protocol A SLURM sibling leaves); default LOO runs always pass it.
     """
     if isinstance(run_date, date):
         date_s = run_date.isoformat()
     else:
         date_s = str(run_date)
-    return (
+    name = (
         f"{date_s}_{int(start_frame)}-{int(end_frame)}_"
         f"{short_model_slug(model_slug)}_{short_layer_slug(feature_layer)}"
     )
+    if normalization is None:
+        return name
+    return f"{name}_{normalization_leaf_tag(normalization)}"
 
 
 def flat_leaf_name(
@@ -207,7 +227,7 @@ def resolve_flat_out_dir(
     Return ``(run_root_dir, leaf_dir)`` under ``experiments/loo_encoding/runs/``.
 
     ``run_root`` may be an absolute path, a name under ``OUT_ROOT``, or None
-    (build from date / window / model / layer).
+    (build from date / window / model / layer / normalization).
     """
     if run_root is None:
         root_dir = repo / OUT_ROOT / flat_run_root_name(
@@ -216,6 +236,7 @@ def resolve_flat_out_dir(
             end_frame=end_frame,
             model_slug=model_slug,
             feature_layer=feature_layer,
+            normalization=normalization,
         )
     else:
         root_path = Path(run_root)

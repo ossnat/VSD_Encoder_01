@@ -19,7 +19,7 @@ class RenderConfig:
     pixels_per_deg: float = 224.0 / 6.0
     quadrant_extent_deg: float = 6.0
     background_gray: int = 128
-    bar_length_deg: float = 0.3
+    bar_length_deg: float = 1.0
     bar_width_px: int = 1
     contour_width_px: int = 1
     assume_size_is_diameter: bool = True

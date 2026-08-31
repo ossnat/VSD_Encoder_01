@@ -17,16 +17,21 @@ source masks.
 (+ sidecar `global_noise_ceiling_hull__mask.yaml`)
 
 This file is the **naive** across-condition hull at `r >= 0.90`, currently
-built on `win_0035_0042` (raw / `normalization: none`). It is a **fixed
-installed artifact**: LOO / ridge analysis windows do **not** have to match
-the ROI-creation window. Analysis uses its own `--window`; the loss ROI is
-whatever mask was last installed.
+built on `win_0035_0046` (raw / `normalization: none`, frames **35–45
+inclusive** / `[35, 46)`). It is a **fixed installed artifact**: LOO / ridge
+analysis windows do **not** have to match the ROI-creation window. Analysis
+uses its own `--window`; `--loss-roi noise_ceiling_hull` loads this alias
+(not a path hardcoded in ridge). Window-tagged source masks live under
+`across_condition/rois/` (the previous official hull was `win_0035_0042`).
 
-Wiring: `src/evaluation/loss_roi.py`.
+Wiring: CLI `--loss-roi noise_ceiling_hull` → `src/evaluation/loss_roi.py`
+(`NOISE_CEILING_HULL_MASK_RELPATH`). NC ROI default `--window` is
+`configs/windows/evoked_35_46.yaml` (`nc_roi_utils.DEFAULT_WINDOW`).
 
-**Note:** Older LOO runs may have used a hull built on `win_0035_0046` or at
-thr=0.85; those run directories are unchanged. Re-run LOO after regenerating
-the mask if you need metrics under the updated ROI.
+**Note:** Older LOO runs (including flatten Ridge lettersA) used the
+`win_0035_0042` install. Those run directories are unchanged. Re-run LOO
+after regenerating / reinstalling the mask if you need metrics under the
+updated ROI.
 
 ## ROI window vs analysis window
 
@@ -35,13 +40,13 @@ the mask if you need metrics under the updated ROI.
 | NC ROI `--window` | Evoked frames + normalization used **only** when building the reliability map / hull |
 | LOO / ridge `--window` | Analysis / encoding pairs window (independent) |
 
-Default ROI `--window` is `configs/windows/evoked_35_42.yaml` (convenient
-match to the current official hull). To build the ROI on a different range
-(e.g. 35–46) while leaving analysis elsewhere:
+Default ROI `--window` is `configs/windows/evoked_35_46.yaml` (match the
+current official 35–45 hull). To rebuild on a different range while leaving
+analysis elsewhere:
 
 ```bash
 scripts/py experiments/noise_ceiling_roi/across_condition/compute_across_condition_reliability.py \
-  --window configs/windows/evoked_35_46.yaml
+  --window configs/windows/evoked_35_42.yaml
 ```
 
 (Requires encoding pairs / averaged trials for that ROI `window_id`.)
@@ -54,7 +59,7 @@ scripts/py experiments/noise_ceiling_roi/across_condition/compute_across_conditi
 
 Defaults:
 
-- `--window configs/windows/evoked_35_42.yaml` → `win_0035_0042`, `normalization: none`
+- `--window configs/windows/evoked_35_46.yaml` → `win_0035_0046`, `normalization: none`
 - `--default-threshold 0.90`
 - `--default-variant naive` (magenta hull)
 - copies that mask → `rois/global_noise_ceiling_hull__mask.npy` (+ yaml sidecar)

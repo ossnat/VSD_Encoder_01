@@ -5,15 +5,20 @@ Protocols (same held-out stimulus list):
   A — leave one (date, condition) matching a held-out stimulus for test;
       other sessions of that stimulus may remain in train/val.
   B — leave entire stimulus_id out of train/val; all its trials are test.
+  C — one fold per held-out stimulus_id (~20): test is one (date, condition)
+      per stimulus (first by sorted date, condition); train/val exclude all
+      trials with that stimulus_id.
 
 Inner train/val is taken from the remainder (prefer existing split labels).
 
 Outputs (default flat layout)::
 
   experiments/loo_encoding/runs/
-    YYYY-MM-DD_{start}-{end}_{model}_{layer}/   # e.g. 2026-08-06_35-46_resnet18_l3
-      protocol_{A|B}_{zscore|raw}_{NChull|disk|full}_{clean|all}/
+    YYYY-MM-DD_{start}-{end}_{model}_{layer}_{zscore|raw}/   # e.g. 2026-08-06_35-46_resnet18_l3_zscore
+      protocol_{A|B|C}_{zscore|raw}_{NChull|disk|full}_{clean|all}/
         params.yaml  folds_index.yaml  loo_summary.csv  <fold_id>/...
+        overview/all_folds_triplets.png          # after encode (non-array)
+        overview/pooled_fold_pixel_r__{raw|zscore}.png
 
 Legacy deep layout (``--layout deep``)::
 
@@ -60,6 +65,25 @@ Usage examples:
   scripts/py experiments/loo_encoding/run_loo_encoding.py \\
     --window configs/windows/evoked_35_43.yaml --protocol A \\
     --one-fold-per-stimulus --seed 17
+
+  # Protocol C (~20 folds: one per stimulus_id; no same-stimulus train)
+  scripts/py experiments/loo_encoding/run_loo_encoding.py \\
+    --window configs/windows/evoked_35_43.yaml --protocol C --dry-run
+
+  # Protocol A letters only; 201118a train-only (never a test fold)
+  scripts/py experiments/loo_encoding/run_loo_encoding.py \\
+    --window configs/windows/evoked_35_46.yaml --protocol A \\
+    --heldout experiments/loo_encoding/heldout_letters.yaml \\
+    --train-only-dates 201118a --stimuli letter_\\* \\
+    --loss-roi noise_ceiling_hull --no-save-model \\
+    --run-root 2026-08-15_35-46_resnet18_l3_lettersA
+
+  # Protocol C non-letters only (letters stay in train remainder)
+  scripts/py experiments/loo_encoding/run_loo_encoding.py \\
+    --window configs/windows/evoked_35_46.yaml --protocol C \\
+    --heldout experiments/loo_encoding/heldout_non_letters.yaml \\
+    --train-only-dates 201118a --loss-roi noise_ceiling_hull \\
+    --no-save-model --run-root 2026-08-15_35-46_resnet18_l3_C_nonletters
 """
 
 from __future__ import annotations
@@ -67,6 +91,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import zlib
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -102,12 +127,19 @@ from src.evaluation.pixel_correlation import (
     build_condition_entries,
     load_trial_mean_maps,
 )
-from src.evaluation.plotting import plot_pixel_mean_maps
+from src.evaluation.plotting import (
+    plot_pixel_mean_maps,
+    plot_recon_with_sample_trial_originals,
+)
 from src.evaluation.roi_mask import DEFAULT_ROIS_DIR, load_roi_mask
 from src.loo.folds import (
+    PROTOCOL_C_TEST_SELECTION_RULE,
     build_protocol_a_folds,
     build_protocol_b_folds,
-    load_heldout_list,
+    build_protocol_c_folds,
+    expand_stimulus_id_patterns,
+    filter_folds_excluding_train_only_dates,
+    load_heldout_config,
     select_one_fold_per_stimulus,
     write_fold_manifest,
 )
@@ -126,6 +158,19 @@ from src.qc.trial_cleanliness import (
 from src.stimuli.identity import attach_stimulus_ids
 
 HELDOUT_DEFAULT = Path("experiments/loo_encoding/heldout_list.yaml")
+# Match plot_pooled_fold_pixel_r_maps cache keys (unlock pooled maps; no refit).
+FOLD_MEAN_EVAL_TEST_SPLIT = "test_split_mean"
+FOLD_MEAN_EVAL_STIMULUS = "stimulus_level_mean"
+FOLD_MEAN_STIMULUS_RECON_MODE = "single_heldout_x"
+SANITY_LAYOUT_MEAN = "mean_triplet"
+SANITY_LAYOUT_TRIALS = "sample_trials"
+SANITY_LAYOUTS = (SANITY_LAYOUT_MEAN, SANITY_LAYOUT_TRIALS)
+
+
+def fold_plot_seed(base_seed: int, fold_id: str) -> int:
+    """Stable per-fold RNG seed for sanity trial sampling."""
+    return zlib.adler32(f"{base_seed}:{fold_id}".encode()) & 0x7FFFFFFF
+
 
 _safe_dir_token = safe_dir_token
 
@@ -223,11 +268,14 @@ def _resolve_train_target_mask(
 
 
 def _fold_artifacts_complete(fold_dir: Path) -> bool:
-    """True when metrics + sanity (+ ROI overlay if present path exists) are done."""
+    """True when metrics + sanity + fold-mean unlock maps are done."""
     required = [
         fold_dir / "metrics.json",
         fold_dir / "sanity_orig_recon_residual.png",
         fold_dir / "dual_metrics_by_stimulus.csv",
+        fold_dir / "fold_mean_orig.npy",
+        fold_dir / "fold_mean_recon.npy",
+        fold_dir / "fold_mean_meta.yaml",
     ]
     if not all(p.is_file() and p.stat().st_size > 0 for p in required):
         return False
@@ -237,6 +285,131 @@ def _fold_artifacts_complete(fold_dir: Path) -> bool:
     if not any(by_cond.glob("*.png")):
         return False
     return True
+
+
+def _load_all_stimulus_trials(
+    *,
+    cfg: dict,
+    repo: Path,
+    stimulus_id: str,
+    model_name: str,
+    feature_layer: str,
+) -> pd.DataFrame:
+    """All encoding-pair rows for ``stimulus_id`` (all sessions), with features."""
+    window_id = cfg.get("window_id") or (
+        f"win_{int(cfg['start_frame']):04d}_{int(cfg['end_frame']):04d}"
+    )
+    pairs_path = encoding_pairs_manifest_path(
+        resolve_data_path(cfg["paths"]["encoding_pairs_root"], repo),
+        cfg["monkey"],
+        window_id,
+    )
+    pairs = pd.read_parquet(pairs_path)
+    pairs = pairs[pairs["nc_exists"] & pairs["stimulus_exists"]].copy()
+    pairs = attach_stimulus_ids(pairs)
+    stim = pairs[pairs["stimulus_id"].astype(str) == str(stimulus_id)].copy()
+    if stim.empty:
+        raise RuntimeError(f"No encoding pairs for stimulus_id={stimulus_id}")
+    features_root = resolve_data_path(cfg["paths"]["dl_features_stimuli_root"], repo)
+    stim = attach_feature_paths(
+        stim,
+        features_root=features_root,
+        monkey=cfg["monkey"],
+        model_slug=model_name,
+        feature_layer=feature_layer,
+        repo=repo,
+    )
+    return stim.reset_index(drop=True)
+
+
+def _persist_fold_mean_maps(
+    *,
+    spec,
+    cfg: dict,
+    repo: Path,
+    fold_dir: Path,
+    test_df: pd.DataFrame,
+    originals: np.ndarray,
+    recons: np.ndarray,
+    result,
+    spatial_size: tuple[int, int],
+    model_name: str,
+    feature_layer: str,
+    start_frame: int,
+    end_frame: int,
+    avg_method: str,
+    normalization: str,
+    baseline_start_frame: int,
+    baseline_end_frame: int,
+    baseline_std_eps: float,
+) -> tuple[dict[str, Any], np.ndarray, np.ndarray]:
+    """Write fold-mean orig/recon npy so pooled maps never refit Ridge.
+
+    Returns ``(meta, fold_mean_orig, fold_mean_recon)``.
+    """
+    sid = spec.heldout_stimulus_id
+    if str(spec.protocol).upper() == "C":
+        stim_df = _load_all_stimulus_trials(
+            cfg=cfg,
+            repo=repo,
+            stimulus_id=sid,
+            model_name=model_name,
+            feature_layer=feature_layer,
+        )
+        stim_orig = load_trial_mean_maps(
+            stim_df,
+            repo=repo,
+            spatial_size=spatial_size,
+            start_frame=start_frame,
+            end_frame=end_frame,
+            avg_method=avg_method,
+            normalization=normalization,
+            baseline_start_frame=baseline_start_frame,
+            baseline_end_frame=baseline_end_frame,
+            baseline_std_eps=baseline_std_eps,
+        )
+        pred_df = (
+            test_df.drop_duplicates(["date", "condition"])
+            .head(1)
+            .reset_index(drop=True)
+        )
+        x_one, _ = build_xy(pred_df, repo=repo, spatial_size=spatial_size)
+        fold_mean_orig = np.nanmean(stim_orig, axis=0).astype(np.float32)
+        fold_mean_recon = predict_maps(result, x_one, spatial_size)[0].astype(
+            np.float32
+        )
+        meta: dict[str, Any] = {
+            "evaluation": FOLD_MEAN_EVAL_STIMULUS,
+            "recon_mode": FOLD_MEAN_STIMULUS_RECON_MODE,
+            "n_trials": int(len(stim_df)),
+            "n_orig_trials": int(len(stim_df)),
+            "n_sessions_orig": int(
+                stim_df[["date", "condition"]].drop_duplicates().shape[0]
+            ),
+            "heldout_stimulus_id": sid,
+            "heldout_date": str(pred_df.iloc[0]["date"]),
+            "heldout_condition": str(pred_df.iloc[0]["condition"]),
+            "note": (
+                "Protocol C stimulus-level mean evaluation on fold weights: "
+                "orig = mean VSD over all stimulus_id trials (all sessions); "
+                "recon = single ŷ from held-out (date, condition) feature X "
+                "(not averaged across sessions)."
+            ),
+        }
+    else:
+        fold_mean_orig = np.nanmean(originals, axis=0).astype(np.float32)
+        fold_mean_recon = np.nanmean(recons, axis=0).astype(np.float32)
+        meta = {
+            "evaluation": FOLD_MEAN_EVAL_TEST_SPLIT,
+            "n_trials": int(len(test_df)),
+            "heldout_stimulus_id": sid,
+            "note": "Mean over fold test-split trials only.",
+        }
+    np.save(fold_dir / "fold_mean_orig.npy", fold_mean_orig)
+    np.save(fold_dir / "fold_mean_recon.npy", fold_mean_recon)
+    with (fold_dir / "fold_mean_meta.yaml").open("w") as f:
+        yaml.safe_dump(meta, f, sort_keys=False)
+    return meta, fold_mean_orig, fold_mean_recon
 
 
 def _summary_row_from_metrics(metrics_path: Path) -> dict[str, Any]:
@@ -276,6 +449,16 @@ def _summary_row_from_metrics(metrics_path: Path) -> dict[str, Any]:
     }
 
 
+def _as_mean_map(arr: np.ndarray) -> np.ndarray:
+    """Accept a (H, W) map or (N, H, W) stack and return the trial-mean map."""
+    a = np.asarray(arr, dtype=np.float32)
+    if a.ndim == 2:
+        return a
+    if a.ndim != 3:
+        raise ValueError(f"expected (H, W) or (N, H, W), got shape {a.shape}")
+    return np.nanmean(a, axis=0).astype(np.float32)
+
+
 def _plot_sanity_orig_recon(
     originals: np.ndarray,
     recons: np.ndarray,
@@ -283,15 +466,41 @@ def _plot_sanity_orig_recon(
     out_path: Path,
     title: str,
     roi_mask: np.ndarray | None = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
+    sanity_layout: str = SANITY_LAYOUT_MEAN,
+    plot_seed: int = 17,
+    n_sample_trials: int = 3,
 ) -> None:
-    """Write the main orig | recon | residual sanity PNG (VSD colormap).
+    """Write the main sanity PNG (VSD_CMAP = mapgeog).
 
-    ``roi_mask`` is accepted for call-site compatibility but is unused: the
-    obsolete gray-colormap ROI-outline overlay is no longer written.
+    Default ``mean_triplet`` (all protocols, including C): fold-mean orig |
+    recon | residual. Orig/recon use independent 1–99% clims unless both
+    ``vmin`` and ``vmax`` are set. ``sample_trials`` is the older Protocol C
+    layout (reconstruction + K random trial originals, no residual).
+
+    ``roi_mask`` is accepted for call-site compatibility but is unused.
     """
     del roi_mask  # kept for API compatibility with replot_sanity_from_models
-    mean_o = np.nanmean(originals, axis=0).astype(np.float32)
-    mean_r = np.nanmean(recons, axis=0).astype(np.float32)
+    if sanity_layout == SANITY_LAYOUT_TRIALS:
+        mean_r = _as_mean_map(recons)
+        plot_recon_with_sample_trial_originals(
+            mean_r,
+            originals,
+            out_path,
+            title=title,
+            n_samples=n_sample_trials,
+            seed=plot_seed,
+            vmin=vmin,
+            vmax=vmax,
+        )
+        return
+    if sanity_layout != SANITY_LAYOUT_MEAN:
+        raise ValueError(
+            f"sanity_layout must be one of {SANITY_LAYOUTS}, got {sanity_layout!r}"
+        )
+    mean_o = _as_mean_map(originals)
+    mean_r = _as_mean_map(recons)
     mean_diff = (mean_r - mean_o).astype(np.float32)
     plot_pixel_mean_maps(
         mean_o,
@@ -299,6 +508,8 @@ def _plot_sanity_orig_recon(
         mean_diff,
         out_path,
         title=title,
+        vmin=vmin,
+        vmax=vmax,
     )
 
 
@@ -372,6 +583,11 @@ def run_fold(
     target_mask_mode: str = "none",
     target_mask_path: Path | None = None,
     roi_dir: Path | None = None,
+    orig_recon_vmin: float | None = None,
+    orig_recon_vmax: float | None = None,
+    plot_seed: int = 17,
+    n_sample_trials: int = 3,
+    sanity_layout: str = SANITY_LAYOUT_MEAN,
 ) -> dict[str, Any]:
     spatial_size = tuple(int(x) for x in cfg["spatial_size"])
     start_frame = int(cfg["start_frame"])
@@ -465,6 +681,27 @@ def run_fold(
     x_test, _ = build_xy(test_df, repo=repo, spatial_size=spatial_size)
     recons = predict_maps(result, x_test, spatial_size)
 
+    fold_mean_meta, fold_mean_orig, fold_mean_recon = _persist_fold_mean_maps(
+        spec=spec,
+        cfg=cfg,
+        repo=repo,
+        fold_dir=fold_dir,
+        test_df=test_df,
+        originals=originals,
+        recons=recons,
+        result=result,
+        spatial_size=spatial_size,
+        model_name=model_name,
+        feature_layer=feature_layer,
+        start_frame=start_frame,
+        end_frame=end_frame,
+        avg_method=avg_method,
+        normalization=normalization,
+        baseline_start_frame=baseline_start_frame,
+        baseline_end_frame=baseline_end_frame,
+        baseline_std_eps=baseline_std_eps,
+    )
+
     try:
         roi = load_roi_mask(
             sid, repo=repo, spatial_size=spatial_size, roi_dir=roi_dir
@@ -528,17 +765,32 @@ def run_fold(
     per_stim.to_csv(per_stim_path, index=False)
 
     if write_plots:
+        if sanity_layout == SANITY_LAYOUT_MEAN:
+            sanity_orig = fold_mean_orig
+            sanity_recon = fold_mean_recon
+            n_orig = int(fold_mean_meta.get("n_trials", len(test_df)))
+            eval_tag = str(fold_mean_meta.get("evaluation", "fold_mean"))
+            n_label = f"{eval_tag} n={n_orig}"
+        else:
+            sanity_orig = originals
+            sanity_recon = recons
+            n_label = f"test n={len(test_df)}"
         _plot_sanity_orig_recon(
-            originals,
-            recons,
+            sanity_orig,
+            sanity_recon,
             out_path=fold_dir / "sanity_orig_recon_residual.png",
             title=(
-                f"{spec.fold_id} | test n={len(test_df)} | "
+                f"{spec.fold_id} | {n_label} | "
                 f"disk r={test_metrics.get('mean_r_disk', float('nan')):.3f} | "
                 f"ROI r={test_metrics.get('mean_r_roi', float('nan')):.3f} | "
                 f"train={train_mask_meta.get('train_targets', 'full_frame')}"
             ),
             roi_mask=overlay_mask,
+            vmin=orig_recon_vmin,
+            vmax=orig_recon_vmax,
+            sanity_layout=sanity_layout,
+            plot_seed=plot_seed,
+            n_sample_trials=n_sample_trials,
         )
         cond_figs = _plot_per_condition_orig_recon(
             test_df,
@@ -582,6 +834,7 @@ def run_fold(
         "val_metrics": val_metrics,
         "dual_metrics_csv": str(per_stim_path.relative_to(repo)),
         "by_condition_figures": cond_figs,
+        "fold_mean_evaluation": fold_mean_meta,
         "pixel_r_note": (
             "mean_r_disk/roi = mean of per-pixel Pearson r across ALL test "
             "trials in this fold, then averaged inside the mask. Undefined "
@@ -628,6 +881,59 @@ def run_fold(
     return row
 
 
+def _nchull_leaf_order(protocol: str) -> tuple[tuple[str, str, str], ...]:
+    return (
+        ("zscore", "clean", f"protocol_{protocol}_zscore_NChull_clean"),
+        ("zscore", "all", f"protocol_{protocol}_zscore_NChull_all"),
+        ("raw", "clean", f"protocol_{protocol}_raw_NChull_clean"),
+        ("raw", "all", f"protocol_{protocol}_raw_NChull_all"),
+    )
+
+
+def _write_post_encode_figures(
+    *,
+    out_dir: Path,
+    run_root: Path,
+    protocol: str,
+    repo: Path,
+    ridge_config: Path,
+    spatial_size: tuple[int, int],
+    layout: str,
+) -> None:
+    """Inclusive all-triplets collage + pooled per-pixel r (no ridge refit)."""
+    from experiments.loo_encoding.assemble_protocol_A_pooled_maps import assemble
+    from experiments.loo_encoding.finalize_loo_leaf import finalize_leaf
+
+    print("Writing inclusive all-triplets overview …", flush=True)
+    fin = finalize_leaf(
+        out_dir,
+        make_overview=True,
+        overview_per_page=24,
+        overview_inclusive=True,
+    )
+    for path in fin.get("overview_paths") or []:
+        print(f"  {path}", flush=True)
+
+    if layout != "flat":
+        print(
+            "SKIP pooled per-pixel r (flat NChull leaves only; "
+            "use assemble_protocol_{A,B,C}_pooled_maps.py)",
+            flush=True,
+        )
+        return
+
+    print("Writing pooled per-pixel r maps …", flush=True)
+    assemble(
+        run_root,
+        repo=repo,
+        ridge_config=ridge_config,
+        spatial_size=spatial_size,
+        protocol_label=str(protocol).upper(),
+        leaf_order=_nchull_leaf_order(str(protocol).upper()),
+        allow_missing_folds=True,
+    )
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--config", type=Path, default=None)
@@ -644,7 +950,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Model YAML (default: configs/models/resnet18.yaml)",
     )
     p.add_argument("--feature-layer", type=str, default=None)
-    p.add_argument("--protocol", choices=["A", "B", "both"], default="B")
+    p.add_argument("--protocol", choices=["A", "B", "C", "both"], default="B")
     p.add_argument(
         "--heldout",
         type=Path,
@@ -658,7 +964,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help=(
             "Run only these held-out stimulus_id values "
-            "(overrides --heldout list for fold building)"
+            "(overrides --heldout list for fold building). "
+            "Glob patterns such as letter_* are expanded against encoding-pair ids."
+        ),
+    )
+    p.add_argument(
+        "--train-only-dates",
+        "--train-only-sessions",
+        dest="train_only_dates",
+        nargs="+",
+        default=None,
+        help=(
+            "Session dates used only in train/val, never as Protocol A/C test "
+            "folds (e.g. 201118a). Union with train_only_sessions in --heldout YAML."
         ),
     )
     p.add_argument(
@@ -676,9 +994,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--one-fold-per-stimulus",
         action="store_true",
         help=(
-            "For protocol A: randomly keep one (date, condition) fold per "
-            "heldout_stimulus_id so fold count matches protocol B. "
-            "Uses --seed (default 17). Writes "
+            "For protocol A only: randomly keep one (date, condition) fold "
+            "per heldout_stimulus_id so fold count matches protocol B. "
+            "Protocol C already uses one fold per stimulus (deterministic "
+            "first sorted date×condition). Uses --seed (default 17). Writes "
             "one_fold_per_stimulus_selection.yaml under the protocol dir."
         ),
     )
@@ -712,12 +1031,41 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     p.add_argument(
+        "--orig-recon-vmin",
+        type=float,
+        default=None,
+        help=(
+            "Optional fixed vmin for orig+recon sanity panels (must pair with "
+            "--orig-recon-vmax). Default: independent 1-99 percentiles per panel."
+        ),
+    )
+    p.add_argument(
+        "--orig-recon-vmax",
+        type=float,
+        default=None,
+        help=(
+            "Optional fixed vmax for orig+recon sanity panels. Residual still "
+            "uses its own symmetric scale."
+        ),
+    )
+    p.add_argument(
+        "--sanity-layout",
+        choices=list(SANITY_LAYOUTS),
+        default=SANITY_LAYOUT_MEAN,
+        help=(
+            "Sanity PNG layout. mean_triplet (default, all protocols including "
+            "C): fold-mean orig | recon | residual with mapgeog (VSD_CMAP) and "
+            "independent recon clim. sample_trials: reconstruction plus K "
+            "random trial originals (no residual; former Protocol C default)."
+        ),
+    )
+    p.add_argument(
         "--layout",
         choices=["flat", "deep"],
         default="flat",
         help=(
             "Output directory layout (default: flat). "
-            "flat → runs/YYYY-MM-DD_35-46_resnet18_l3/protocol_A_zscore_NChull_clean/; "
+            "flat → runs/YYYY-MM-DD_35-46_resnet18_l3_zscore/protocol_A_zscore_NChull_clean/; "
             "deep → legacy runs/<window_id>/<model>/<layer>/protocol_*/"
         ),
     )
@@ -809,12 +1157,26 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Requires --fold-id (or --smoke / --max-folds)."
         ),
     )
+    p.add_argument(
+        "--skip-post-encode-figures",
+        action="store_true",
+        help=(
+            "Skip the inclusive all-triplets overview and pooled per-pixel r "
+            "maps written after a full (non-array) encode. Array workers never "
+            "write these; use finalize_loo_leaf.py + "
+            "assemble_protocol_{A,B,C}_pooled_maps.py instead."
+        ),
+    )
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     argv_list = list(argv) if argv is not None else sys.argv[1:]
     args = parse_args(argv_list)
+    if (args.orig_recon_vmin is None) != (args.orig_recon_vmax is None):
+        raise SystemExit(
+            "--orig-recon-vmin and --orig-recon-vmax must be set together"
+        )
     repo = project_root()
     config_path = args.config or (repo / "configs/default.yaml")
     ridge_path = args.ridge_config or (repo / "configs/ridge/default.yaml")
@@ -894,11 +1256,26 @@ def main(argv: list[str] | None = None) -> int:
     flat_extra_tag = user_run_tag
 
     heldout_path = args.heldout or (repo / HELDOUT_DEFAULT)
-    heldout_ids = load_heldout_list(
+    heldout_cfg = load_heldout_config(
         heldout_path if heldout_path.is_absolute() else repo / heldout_path
     )
-    if args.stimuli:
-        heldout_ids = list(args.stimuli)
+    heldout_patterns = (
+        list(args.stimuli) if args.stimuli else list(heldout_cfg.stimulus_ids)
+    )
+    available_ids = [
+        str(x) for x in pairs["stimulus_id"].dropna().unique().tolist()
+    ]
+    heldout_ids = expand_stimulus_id_patterns(heldout_patterns, available_ids)
+    train_only_dates = list(
+        dict.fromkeys(
+            list(heldout_cfg.train_only_sessions)
+            + list(args.train_only_dates or [])
+        )
+    )
+    print(
+        f"heldout patterns={heldout_patterns} -> {heldout_ids}"
+        + (f"  train_only={train_only_dates}" if train_only_dates else "")
+    )
 
     protocols = ["A", "B"] if args.protocol == "both" else [args.protocol]
     summary_rows: list[dict[str, Any]] = []
@@ -909,7 +1286,8 @@ def main(argv: list[str] | None = None) -> int:
     if array_worker:
         if args.protocol == "both":
             raise SystemExit(
-                "--array-worker requires a single --protocol (A or B), not both"
+                "--array-worker requires a single --protocol (A, B, or C), "
+                "not both"
             )
         if not (args.fold_id or args.smoke or args.max_folds is not None):
             raise SystemExit(
@@ -929,24 +1307,50 @@ def main(argv: list[str] | None = None) -> int:
             folds = build_protocol_a_folds(
                 pairs, heldout_ids, seed=args.seed
             )
+        elif protocol == "C":
+            folds = build_protocol_c_folds(
+                pairs, heldout_ids, seed=args.seed
+            )
         else:
             folds = build_protocol_b_folds(
                 pairs, heldout_ids, seed=args.seed
             )
 
-        if args.one_fold_per_stimulus:
-            if protocol != "A":
-                print(
-                    "WARNING: --one-fold-per-stimulus is intended for "
-                    f"protocol A; ignoring for protocol {protocol}"
+        if train_only_dates:
+            before = len(folds)
+            folds = filter_folds_excluding_train_only_dates(
+                folds, train_only_dates
+            )
+            print(
+                f"[{protocol}] train-only dates {train_only_dates}: "
+                f"{before} folds -> {len(folds)} "
+                "(skipped test folds whose heldout_date is train-only)"
+            )
+            if not folds:
+                raise SystemExit(
+                    f"No folds left after --train-only-dates {train_only_dates!r} "
+                    f"(protocol={protocol})"
                 )
-            else:
+
+        if args.one_fold_per_stimulus:
+            if protocol == "C":
+                print(
+                    "NOTE: Protocol C already uses one fold per stimulus_id "
+                    "(first sorted date×condition); ignoring "
+                    "--one-fold-per-stimulus"
+                )
+            elif protocol == "A":
                 before = len(folds)
                 folds = select_one_fold_per_stimulus(folds, seed=args.seed)
                 print(
-                    f"[A] --one-fold-per-stimulus seed={args.seed}: "
+                    f"[{protocol}] --one-fold-per-stimulus seed={args.seed}: "
                     f"{before} folds -> {len(folds)} "
                     "(one random date/condition per stimulus_id)"
+                )
+            else:
+                print(
+                    "WARNING: --one-fold-per-stimulus is for protocol A only; "
+                    f"ignoring for protocol {protocol}"
                 )
 
         if args.fold_id:
@@ -1040,6 +1444,11 @@ def main(argv: list[str] | None = None) -> int:
                     "one_fold_per_stimulus": bool(args.one_fold_per_stimulus),
                     "dry_run": bool(args.dry_run),
                     "monkey": cfg.get("monkey"),
+                    "orig_recon_vmin": args.orig_recon_vmin,
+                    "orig_recon_vmax": args.orig_recon_vmax,
+                    "sanity_layout": args.sanity_layout,
+                    "train_only_sessions": train_only_dates,
+                    "heldout_patterns": heldout_patterns,
                 },
             )
             if cleanliness_stats is not None:
@@ -1076,6 +1485,28 @@ def main(argv: list[str] | None = None) -> int:
                     yaml.safe_dump(selection, f, sort_keys=False)
                 print(f"Wrote selection: {sel_path.relative_to(repo)}")
 
+            if protocol == "C" and not array_worker:
+                c_selection = {
+                    "selection_rule": PROTOCOL_C_TEST_SELECTION_RULE,
+                    "n_folds": len(folds),
+                    "folds": [
+                        {
+                            "fold_id": spec.fold_id,
+                            "heldout_stimulus_id": spec.heldout_stimulus_id,
+                            "heldout_date": spec.heldout_date,
+                            "heldout_condition": spec.heldout_condition,
+                            "n_train": spec.n_train,
+                            "n_val": spec.n_val,
+                            "n_test": spec.n_test,
+                        }
+                        for spec, _ in folds
+                    ],
+                }
+                c_sel_path = out_dir / "protocol_c_test_selection.yaml"
+                with c_sel_path.open("w") as f:
+                    yaml.safe_dump(c_selection, f, sort_keys=False)
+                print(f"Wrote selection: {c_sel_path.relative_to(repo)}")
+
         index_rows: list[dict[str, Any]] = []
         failed: list[dict[str, str]] = []
         protocol_summary_rows: list[dict[str, Any]] = []
@@ -1104,6 +1535,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 continue
             try:
+                trial_plot_seed = fold_plot_seed(args.seed, spec.fold_id)
                 row = run_fold(
                     cfg=cfg,
                     repo=repo,
@@ -1117,6 +1549,10 @@ def main(argv: list[str] | None = None) -> int:
                     target_mask_mode=target_mask_mode,
                     target_mask_path=target_mask_path,
                     roi_dir=roi_dir,
+                    orig_recon_vmin=args.orig_recon_vmin,
+                    orig_recon_vmax=args.orig_recon_vmax,
+                    plot_seed=trial_plot_seed,
+                    sanity_layout=args.sanity_layout,
                 )
             except Exception as exc:  # noqa: BLE001 — continue other folds
                 msg = f"{type(exc).__name__}: {exc}"
@@ -1201,6 +1637,7 @@ def main(argv: list[str] | None = None) -> int:
                 "roi_dir": str(roi_dir) if roi_dir else str(DEFAULT_ROIS_DIR),
                 "run_tag": args.run_tag,
                 "heldout_list": merged_heldout,
+                "train_only_sessions": train_only_dates,
                 "n_folds": len(merged_folds),
                 "n_failed": len(merged_failed),
                 "failed_folds": merged_failed,
@@ -1233,6 +1670,32 @@ def main(argv: list[str] | None = None) -> int:
                     )
                 summary.to_csv(summary_path, index=False)
                 print(f"Wrote {summary_path.relative_to(repo)}")
+
+            if (
+                not args.dry_run
+                and not args.skip_post_encode_figures
+                and protocol_summary_rows
+            ):
+                fig_root = (
+                    flat_run_root_dir
+                    if flat_run_root_dir is not None
+                    else out_dir.parent
+                )
+                try:
+                    _write_post_encode_figures(
+                        out_dir=out_dir,
+                        run_root=fig_root,
+                        protocol=protocol,
+                        repo=repo,
+                        ridge_config=ridge_path,
+                        spatial_size=tuple(int(x) for x in cfg["spatial_size"]),
+                        layout=args.layout,
+                    )
+                except Exception as exc:  # noqa: BLE001 — encode already succeeded
+                    print(
+                        f"WARNING: post-encode figures failed ({type(exc).__name__}: {exc})",
+                        flush=True,
+                    )
         elif failed:
             print(
                 f"WARNING: {len(failed)} fold(s) failed: "

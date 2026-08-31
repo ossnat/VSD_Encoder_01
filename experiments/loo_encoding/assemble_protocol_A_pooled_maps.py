@@ -37,19 +37,21 @@ import yaml
 from experiments.loo_encoding.plot_pooled_fold_pixel_r_maps import (
     _load_hull_mask,
     _mean_underlay,
-    pooled_fold_pixel_r_map,
+    pooled_fold_pixel_maps,
     save_single_map,
+    save_single_r2_map,
 )
 from src.evaluation.mask import masked_map_summary
 from src.paths import project_root
 from src.plotting_colormaps import VSD_CMAP
 
-LEAF_ORDER = (
+PROTOCOL_A_LEAF_ORDER = (
     ("zscore", "clean", "protocol_A_zscore_NChull_clean"),
     ("zscore", "all", "protocol_A_zscore_NChull_all"),
     ("raw", "clean", "protocol_A_raw_NChull_clean"),
     ("raw", "all", "protocol_A_raw_NChull_all"),
 )
+LEAF_ORDER = PROTOCOL_A_LEAF_ORDER
 
 LEAF_KEY_ALIASES = {
     "zscore_clean": ("zscore", "clean"),
@@ -67,32 +69,43 @@ def _npy_path(protocol_dir: Path, window_kind: str) -> Path:
     return protocol_dir / "overview" / f"pooled_fold_pixel_r__{window_kind}.npy"
 
 
+def _r2_npy_path(protocol_dir: Path, window_kind: str) -> Path:
+    return protocol_dir / "overview" / f"pooled_fold_pixel_r2__{window_kind}.npy"
+
+
 def _load_yaml(path: Path) -> dict[str, Any]:
     with path.open() as f:
         return yaml.safe_load(f) or {}
 
 
-def _resolve_leaves(run_root: Path) -> list[tuple[str, str, Path]]:
+def _resolve_leaves(
+    run_root: Path,
+    *,
+    leaf_order: tuple[tuple[str, str, str], ...],
+    protocol_prefix: str,
+) -> list[tuple[str, str, Path]]:
     repo = project_root()
     manifest = run_root / "pipeline_manifest.yaml"
     if manifest.is_file():
         plan = _load_yaml(manifest)
-        return [
-            (
-                str(leaf["window_kind"]),
-                str(leaf["cleanliness"]),
-                repo / leaf["leaf_dir"],
-            )
-            for leaf in plan.get("leaves") or []
-        ]
+        leaves = plan.get("leaves") or []
+        if leaves:
+            return [
+                (
+                    str(leaf["window_kind"]),
+                    str(leaf["cleanliness"]),
+                    repo / leaf["leaf_dir"],
+                )
+                for leaf in leaves
+            ]
     found: list[tuple[str, str, Path]] = []
-    for window_kind, cleanliness, name in LEAF_ORDER:
+    for window_kind, cleanliness, name in leaf_order:
         path = run_root / name
         if path.is_dir():
             found.append((window_kind, cleanliness, path))
     if not found:
         raise FileNotFoundError(
-            f"No protocol_A_*_NChull_* leaves under {run_root}"
+            f"No {protocol_prefix}_* leaves under {run_root}"
         )
     return found
 
@@ -143,16 +156,25 @@ def _save_zscore_raw_pair(
     raw_n: int,
     out_path: Path,
     title: str,
+    metric_label: str = "r",
+    vmin: float = -1.0,
+    vmax: float = 1.0,
 ) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig, axes = plt.subplots(1, 2, figsize=(9.2, 4.2), layout="constrained")
     panels = [
-        (f"zscore · n={zscore_n}\nmean r (NC hull) = {zscore_mean:.3f}", zscore_map),
-        (f"raw · n={raw_n}\nmean r (NC hull) = {raw_mean:.3f}", raw_map),
+        (
+            f"zscore · n={zscore_n}\nmean {metric_label} (NC hull) = {zscore_mean:.3f}",
+            zscore_map,
+        ),
+        (
+            f"raw · n={raw_n}\nmean {metric_label} (NC hull) = {raw_mean:.3f}",
+            raw_map,
+        ),
     ]
     im = None
     for ax, (panel_title, arr) in zip(axes, panels):
-        im = ax.imshow(arr, cmap=VSD_CMAP, vmin=-1.0, vmax=1.0)
+        im = ax.imshow(arr, cmap=VSD_CMAP, vmin=vmin, vmax=vmax)
         ax.set_title(panel_title, fontsize=10)
         ax.axis("off")
     fig.colorbar(im, ax=axes, fraction=0.035, pad=0.02)
@@ -181,6 +203,19 @@ def _n_folds_from_index(protocol_dir: Path) -> int:
     return int(len(folds))
 
 
+def _load_cached_r2_map(
+    protocol_dir: Path,
+    window_kind: str,
+    hull_mask: np.ndarray,
+) -> tuple[np.ndarray, float] | None:
+    npy = _r2_npy_path(protocol_dir, window_kind)
+    if not npy.is_file():
+        return None
+    r2_map = np.load(npy)
+    mean_r2 = float(masked_map_summary(r2_map, hull_mask)["mean"])
+    return r2_map, mean_r2
+
+
 def _load_cached_map(
     protocol_dir: Path,
     window_kind: str,
@@ -206,7 +241,26 @@ def assemble(
     window_kinds: set[str] | None = None,
     cleanlinesses: set[str] | None = None,
     skip_existing: bool = False,
+    protocol_label: str = "A",
+    leaf_order: tuple[tuple[str, str, str], ...] | None = None,
+    allow_missing_folds: bool = False,
+    summary_basename: str | None = None,
 ) -> dict[str, Any]:
+    order = leaf_order or PROTOCOL_A_LEAF_ORDER
+    protocol_prefix = f"protocol_{protocol_label}"
+    if protocol_label == "A":
+        summary_stem = summary_basename or "pooled_fold_pixel_r_summary"
+        r2_summary_stem = "pooled_fold_pixel_r2_summary"
+        pair_tag = "protocol_A"
+        grid_suffix = "2x2_clean_all_zscore_raw"
+        table_name = "corr_summary_encoding.csv"
+    else:
+        summary_stem = summary_basename or f"pooled_fold_pixel_r_summary__protocol_{protocol_label}"
+        r2_summary_stem = f"pooled_fold_pixel_r2_summary__protocol_{protocol_label}"
+        pair_tag = f"protocol_{protocol_label}"
+        grid_suffix = f"protocol_{protocol_label}_2x2_clean_all_zscore_raw"
+        table_name = f"corr_summary_encoding__protocol_{protocol_label}.csv"
+
     ridge_cfg = _load_yaml(
         ridge_config if ridge_config.is_absolute() else repo / ridge_config
     )
@@ -214,7 +268,11 @@ def assemble(
     hull_mask = _load_hull_mask(repo, spatial_size)
 
     leaves = _filter_leaves(
-        _resolve_leaves(run_root),
+        _resolve_leaves(
+            run_root,
+            leaf_order=order,
+            protocol_prefix=protocol_prefix,
+        ),
         leaf_keys=leaf_keys,
         window_kinds=window_kinds,
         cleanlinesses=cleanlinesses,
@@ -224,7 +282,9 @@ def assemble(
 
     rows: list[dict[str, Any]] = []
     maps: dict[tuple[str, str], np.ndarray] = {}
+    r2_maps: dict[tuple[str, str], np.ndarray] = {}
     means: dict[tuple[str, str], float] = {}
+    r2_means: dict[tuple[str, str], float] = {}
     ns: dict[tuple[str, str], int] = {}
 
     for window_kind, cleanliness, protocol_dir in leaves:
@@ -239,15 +299,23 @@ def assemble(
                 print(f"SKIP existing missing/unreadable: {npy}", flush=True)
                 continue
             corr_map, mean_r, n_folds = cached
+            cached_r2 = _load_cached_r2_map(protocol_dir, window_kind, hull_mask)
+            if cached_r2 is not None:
+                r2_map, mean_r2 = cached_r2
+            else:
+                r2_map = np.full_like(corr_map, np.nan, dtype=np.float32)
+                mean_r2 = float("nan")
             print(
                 f"SKIP existing · {window_kind}/{cleanliness} "
-                f"({npy.name}, mean r={mean_r:.3f})",
+                f"({npy.name}, mean r={mean_r:.3f}, mean r²={mean_r2:.3f})",
                 flush=True,
             )
             png = protocol_dir / "overview" / f"pooled_fold_pixel_r__{window_kind}.png"
             key = (window_kind, cleanliness)
             maps[key] = corr_map
+            r2_maps[key] = r2_map
             means[key] = float(mean_r)
+            r2_means[key] = float(mean_r2)
             ns[key] = int(n_folds)
             rows.append(
                 {
@@ -256,6 +324,7 @@ def assemble(
                     "leaf_dir": str(protocol_dir.relative_to(repo)),
                     "n_folds": n_folds,
                     "mean_r_hull": float(mean_r),
+                    "mean_r2_hull": float(mean_r2),
                     "n_pixels_hull": int(hull_mask.sum()),
                     "png": str(png.relative_to(repo)) if png.is_file() else None,
                     "fold_ids": [],
@@ -265,16 +334,21 @@ def assemble(
             continue
 
         print(
-            f"Computing pooled encoding r · {window_kind}/{cleanliness} …",
+            f"Computing pooled encoding r / R² · {window_kind}/{cleanliness} …",
             flush=True,
         )
-        corr_map, mean_r, n_folds, fold_ids = pooled_fold_pixel_r_map(
+        fold_mean_eval = (
+            "stimulus_level_mean" if protocol_label == "C" else None
+        )
+        corr_map, r2_map, mean_r, mean_r2, n_folds, fold_ids = pooled_fold_pixel_maps(
             protocol_dir,
             repo=repo,
             spatial_size=spatial_size,
             hull_mask=hull_mask,
             avg_method=avg_method,
             standardize_features=standardize_features,
+            allow_missing_folds=allow_missing_folds,
+            fold_mean_eval=fold_mean_eval,
         )
         underlay = _mean_underlay(
             protocol_dir,
@@ -282,19 +356,38 @@ def assemble(
             spatial_size=spatial_size,
             avg_method=avg_method,
             standardize_features=standardize_features,
+            fold_ids=fold_ids,
+            allow_missing_folds=allow_missing_folds,
+            fold_mean_eval=fold_mean_eval,
         )
         overview = protocol_dir / "overview"
         overview.mkdir(parents=True, exist_ok=True)
+        mean_label = (
+            "stim-mean y vs single held-out ŷ"
+            if protocol_label == "C"
+            else "fold-mean orig vs recon"
+        )
         title = (
-            f"Protocol A · {window_kind} · {cleanliness} · n={n_folds}\n"
-            f"fold-mean orig vs recon · NC hull · mean r={mean_r:.3f}"
+            f"Protocol {protocol_label} · {window_kind} · {cleanliness} · n={n_folds}\n"
+            f"{mean_label} · NC hull · mean r={mean_r:.3f}"
         )
         png = overview / f"pooled_fold_pixel_r__{window_kind}.png"
         save_single_map(corr_map, out_path=png, title=title, underlay=underlay)
         np.save(npy, corr_map.astype(np.float32))
+
+        r2_title = (
+            f"Protocol {protocol_label} · {window_kind} · {cleanliness} · n={n_folds}\n"
+            f"{mean_label} · NC hull · mean R²={mean_r2:.3f}"
+        )
+        r2_png = overview / f"pooled_fold_pixel_r2__{window_kind}.png"
+        save_single_r2_map(r2_map, out_path=r2_png, title=r2_title, underlay=underlay)
+        np.save(_r2_npy_path(protocol_dir, window_kind), r2_map.astype(np.float32))
+
         key = (window_kind, cleanliness)
         maps[key] = corr_map
+        r2_maps[key] = r2_map
         means[key] = float(mean_r)
+        r2_means[key] = float(mean_r2)
         ns[key] = int(n_folds)
         rows.append(
             {
@@ -303,10 +396,16 @@ def assemble(
                 "leaf_dir": str(protocol_dir.relative_to(repo)),
                 "n_folds": n_folds,
                 "mean_r_hull": float(mean_r),
+                "mean_r2_hull": float(mean_r2),
                 "n_pixels_hull": int(hull_mask.sum()),
                 "png": str(png.relative_to(repo)),
+                "r2_png": str(r2_png.relative_to(repo)),
                 "fold_ids": fold_ids,
             }
+        )
+        print(
+            f"  n_folds={n_folds}  mean_r_hull={mean_r:.4f}  mean_r2_hull={mean_r2:.4f}",
+            flush=True,
         )
 
     # Pair plots: clean zscore vs raw, all zscore vs raw
@@ -316,7 +415,7 @@ def assemble(
         if zk in maps and rk in maps:
             out = (
                 run_root
-                / f"pooled_fold_pixel_r__protocol_A_{cleanliness}_zscore_vs_raw.png"
+                / f"pooled_fold_pixel_r__{pair_tag}_{cleanliness}_zscore_vs_raw.png"
             )
             _save_zscore_raw_pair(
                 zscore_map=maps[zk],
@@ -327,10 +426,30 @@ def assemble(
                 raw_n=ns[rk],
                 out_path=out,
                 title=(
-                    f"Protocol A encoding · {cleanliness} trials · "
+                    f"Protocol {protocol_label} encoding · {cleanliness} trials · "
                     "pooled fold pixel-r (NC hull)"
                 ),
+                metric_label="r",
             )
+            if zk in r2_maps and rk in r2_maps:
+                r2_out = (
+                    run_root
+                    / f"pooled_fold_pixel_r2__{pair_tag}_{cleanliness}_zscore_vs_raw.png"
+                )
+                _save_zscore_raw_pair(
+                    zscore_map=r2_maps[zk],
+                    raw_map=r2_maps[rk],
+                    zscore_mean=r2_means[zk],
+                    raw_mean=r2_means[rk],
+                    zscore_n=ns[zk],
+                    raw_n=ns[rk],
+                    out_path=r2_out,
+                    title=(
+                        f"Protocol {protocol_label} encoding · {cleanliness} trials · "
+                        "pooled fold pixel-R² (NC hull)"
+                    ),
+                    metric_label="R²",
+                )
 
     # 2×2 grid if all four present
     grid_keys = [
@@ -355,16 +474,41 @@ def assemble(
             im, ax=axes.ravel().tolist(), fraction=0.025, pad=0.02, label="Pearson r"
         )
         fig.suptitle(
-            "Protocol A pooled fold-level encoding pixel-r (NC hull)",
+            f"Protocol {protocol_label} pooled fold-level encoding pixel-r (NC hull)",
             fontsize=11,
         )
-        grid_path = run_root / "pooled_fold_pixel_r__2x2_clean_all_zscore_raw.png"
+        grid_path = run_root / f"pooled_fold_pixel_r__{grid_suffix}.png"
         fig.savefig(grid_path, dpi=150, bbox_inches="tight")
         plt.close(fig)
 
-    summary_path = run_root / "pooled_fold_pixel_r_summary.json"
+    if all(k in r2_maps for k in grid_keys):
+        fig, axes = plt.subplots(2, 2, figsize=(10.5, 9.5), layout="constrained")
+        im = None
+        for ax, key in zip(axes.ravel(), grid_keys):
+            window_kind, cleanliness = key
+            title = (
+                f"{window_kind} · {cleanliness} · n={ns[key]}\n"
+                f"mean R² (NC hull) = {r2_means[key]:.3f}"
+            )
+            im = ax.imshow(r2_maps[key], cmap=VSD_CMAP, vmin=-1.0, vmax=1.0)
+            ax.set_title(title, fontsize=10)
+            ax.axis("off")
+        fig.colorbar(
+            im, ax=axes.ravel().tolist(), fraction=0.025, pad=0.02, label="R²"
+        )
+        fig.suptitle(
+            f"Protocol {protocol_label} pooled fold-level encoding pixel-R² (NC hull)",
+            fontsize=11,
+        )
+        r2_grid_path = run_root / f"pooled_fold_pixel_r2__{grid_suffix}.png"
+        fig.savefig(r2_grid_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+    summary_path = run_root / f"{summary_stem}.json"
+    r2_summary_path = run_root / f"{r2_summary_stem}.json"
     existing = _load_existing_summary(summary_path)
     existing_means = dict(existing.get("encoding_mean_r_hull") or {})
+    existing_r2_means = dict(existing.get("encoding_mean_r2_hull") or {})
     existing_rows = {
         _leaf_key(str(r["window_kind"]), str(r["cleanliness"])): r
         for r in (existing.get("leaves") or [])
@@ -374,11 +518,13 @@ def assemble(
         existing_rows[_leaf_key(row["window_kind"], row["cleanliness"])] = row
     for (w, c), mean_r in means.items():
         existing_means[f"{w}_{c}"] = mean_r
+    for (w, c), mean_r2 in r2_means.items():
+        existing_r2_means[f"{w}_{c}"] = mean_r2
 
     # Prefer LEAF_ORDER for stable row order; append any extras.
     ordered_rows: list[dict[str, Any]] = []
     seen: set[str] = set()
-    for w, c, _ in LEAF_ORDER:
+    for w, c, _ in order:
         k = _leaf_key(w, c)
         if k in existing_rows:
             ordered_rows.append(existing_rows[k])
@@ -398,21 +544,41 @@ def assemble(
                 "all_data_encoding_mean_r_hull": existing_means.get(
                     f"{window_kind}_all"
                 ),
+                "clean_encoding_mean_r2_hull": existing_r2_means.get(
+                    f"{window_kind}_clean"
+                ),
+                "all_data_encoding_mean_r2_hull": existing_r2_means.get(
+                    f"{window_kind}_all"
+                ),
             }
         )
     table = pd.DataFrame(table_rows)
-    table_path = run_root / "corr_summary_encoding.csv"
+    table_path = run_root / table_name
     table.to_csv(table_path, index=False)
 
     summary = {
+        "protocol": protocol_label,
         "run_root": str(run_root.relative_to(repo)),
         "leaves": ordered_rows,
         "encoding_mean_r_hull": existing_means,
+        "encoding_mean_r2_hull": existing_r2_means,
+        "allow_missing_folds": allow_missing_folds,
     }
     with summary_path.open("w") as f:
         json.dump(summary, f, indent=2)
 
+    r2_summary = {
+        "protocol": protocol_label,
+        "run_root": str(run_root.relative_to(repo)),
+        "leaves": ordered_rows,
+        "encoding_mean_r2_hull": existing_r2_means,
+        "allow_missing_folds": allow_missing_folds,
+    }
+    with r2_summary_path.open("w") as f:
+        json.dump(r2_summary, f, indent=2)
+
     print(f"Wrote {summary_path.relative_to(repo)}")
+    print(f"Wrote {r2_summary_path.relative_to(repo)}")
     print(f"Wrote {table_path.relative_to(repo)}")
     return summary
 
@@ -473,6 +639,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "and skip recomputation (resume after TIMEOUT)"
         ),
     )
+    p.add_argument(
+        "--allow-missing-folds",
+        action="store_true",
+        help="Use only completed fold dirs (partial encode runs)",
+    )
     return p.parse_args(argv)
 
 
@@ -526,6 +697,7 @@ def main(argv: list[str] | None = None) -> int:
         window_kinds=window_kinds,
         cleanlinesses=cleanlinesses,
         skip_existing=bool(args.skip_existing),
+        allow_missing_folds=bool(args.allow_missing_folds),
     )
     return 0
 

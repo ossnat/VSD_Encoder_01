@@ -64,6 +64,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--device", type=str, default="auto", help="auto|cpu|cuda|mps")
+    parser.add_argument(
+        "--only-shape-types",
+        type=str,
+        default=None,
+        help="Comma-separated shape types to extract (e.g. bar_vertical,bar_horizontal)",
+    )
     return parser.parse_args(argv)
 
 
@@ -87,6 +93,9 @@ def main(argv: list[str] | None = None) -> int:
             f"Stimulus manifest not found: {stim_manifest_path}. Run stage 01b first."
         )
     manifest = dedupe_stimulus_manifest(pd.read_parquet(stim_manifest_path))
+    if args.only_shape_types:
+        shapes = {s.strip() for s in args.only_shape_types.split(",") if s.strip()}
+        manifest = manifest[manifest["shape_type"].astype(str).isin(shapes)].copy()
     if manifest.empty:
         raise RuntimeError("No stimuli to process in manifest")
 
@@ -134,6 +143,27 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     feat_manifest = out_dir / "manifest.parquet"
+    if args.only_shape_types and feat_manifest.is_file():
+        # Merge bar (or other filtered) rows into the existing full feature manifest.
+        existing = pd.read_parquet(feat_manifest)
+        keys = ["h5_session", "condition"]
+        drop_keys = set(
+            zip(
+                feat_df["h5_session"].astype(str),
+                feat_df["condition"].astype(str),
+            )
+        )
+        keep = [
+            not (
+                (str(r.h5_session), str(r.condition)) in drop_keys
+            )
+            for r in existing.itertuples(index=False)
+        ]
+        existing = existing.loc[keep]
+        feat_df = pd.concat([existing, feat_df], ignore_index=True)
+        feat_df = feat_df.drop_duplicates(keys, keep="last").sort_values(
+            ["h5_session", "condition"]
+        ).reset_index(drop=True)
     feat_df.to_parquet(feat_manifest, index=False)
 
     sample_shape = feat_df.iloc[0]["feature_shape"] if not feat_df.empty else None

@@ -34,6 +34,17 @@ def test_pixel_r2_perfect_prediction():
     assert np.nanmean(r2) == pytest.approx(1.0, abs=1e-5)
 
 
+def test_pooled_stack_r2_below_one_for_scaled_prediction():
+    """Scaled copy: r=1 but R² < 1 unless scale is 1."""
+    n, h, w = 6, 4, 4
+    base = np.random.randn(n, h, w).astype(np.float32)
+    scaled = 1.7 * base
+    corr = pixel_correlation_across_trials(base, scaled)
+    r2 = pixel_r2_across_trials(base, scaled)
+    assert np.nanmean(corr) == pytest.approx(1.0, abs=1e-5)
+    assert np.nanmean(r2) < 1.0
+
+
 def test_pixel_r2_can_be_negative():
     t, h, w = 4, 2, 2
     originals = np.array(

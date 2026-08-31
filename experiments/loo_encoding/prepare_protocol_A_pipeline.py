@@ -114,12 +114,15 @@ def plan_pipeline(
     start_frame = int(win0["start_frame"])
     end_frame = int(win0["end_frame"])
     run_date_s = run_date or str(cfg.get("run_date") or date.today().isoformat())
+    # Shared root for zscore+raw sibling leaves; omit the per-window tag.
+    # Single-window LOO runs (run_loo_encoding.py) include _zscore/_raw.
     run_root_name = cfg.get("run_root") or flat_run_root_name(
         run_date=run_date_s,
         start_frame=start_frame,
         end_frame=end_frame,
         model_slug=model_name,
         feature_layer=feature_layer,
+        normalization=None,
     )
     run_root = repo / "experiments/loo_encoding/runs" / str(run_root_name)
 

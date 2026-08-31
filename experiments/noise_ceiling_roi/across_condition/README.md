@@ -4,7 +4,7 @@
 
 Global reliability convex hull where the **correlation vector length is
 `n_stimuli`**, not `n_trials`. Official LOO mask =
-**naive (magenta) hull at thr=0.90** on `win_0035_0042`.
+**naive (magenta) hull at thr=0.90** on `win_0035_0046` (frames 35–45).
 
 ## Method
 
@@ -39,11 +39,11 @@ Then:
 
 ## Window / normalization (ROI creation only)
 
-**Default:** raw `configs/windows/evoked_35_42.yaml` → `win_0035_0042`
+**Default:** raw `configs/windows/evoked_35_46.yaml` → `win_0035_0046`
 
 | Field | Value |
 |-------|--------|
-| ROI window | `[35, 42)` → frames 35–41 inclusive |
+| ROI window | `[35, 46)` → frames 35–45 inclusive |
 | Normalization | `none` (raw F/F₀ window mean) |
 
 This `--window` chooses the frames/normalization used to **build** the mask.
@@ -51,11 +51,12 @@ It does **not** force LOO / ridge analysis to the same window: analysis keeps
 its own config, and `--loss-roi noise_ceiling_hull` loads the installed
 `.npy` regardless of how that mask was built.
 
-Example — ROI on 35–46, analysis elsewhere still fine:
+Example — rebuild the older 35–42 hull (do not silently stay on that
+window for `[35, 46)` encoding):
 
 ```bash
 scripts/py experiments/noise_ceiling_roi/across_condition/compute_across_condition_reliability.py \
-  --window configs/windows/evoked_35_46.yaml
+  --window configs/windows/evoked_35_42.yaml
 ```
 
 Optional baseline z-score (requires encoding pairs for that `window_id`):

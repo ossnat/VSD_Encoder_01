@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 STIMULUS_COL = "stimulus (need to check r/d)"
@@ -129,12 +130,12 @@ def _parse_stimulus_text(text: str, *, bar_length_deg: float) -> tuple[str, str,
         return color, "circle_contour", size_deg, False
     if "filled circle" in lower or ("circle" in lower and "contour" not in lower):
         return color, "filled_circle", size_deg, False
+    # All catalog bars are 1° long; ignore any length token in the CSV text
+    # (legacy fallback was 0.3° and produced black_bar_*_0.3 stimulus_ids).
     if "bar vertical" in lower or "vertical bar" in lower:
-        length = size_deg if size_deg is not None else bar_length_deg
-        return color, "bar_vertical", length, False
+        return color, "bar_vertical", float(bar_length_deg), False
     if "bar horizontal" in lower or "horizontal bar" in lower:
-        length = size_deg if size_deg is not None else bar_length_deg
-        return color, "bar_horizontal", length, False
+        return color, "bar_horizontal", float(bar_length_deg), False
 
     raise ValueError(f"Unrecognized stimulus description: {text!r}")
 
@@ -143,7 +144,7 @@ def parse_stimulus_rows(
     df: pd.DataFrame,
     *,
     monkey: str,
-    bar_length_deg: float = 0.3,
+    bar_length_deg: float = 1.0,
 ) -> list[StimulusSpec]:
     """Expand grouped CSV rows into one StimulusSpec per condition."""
     rows: list[StimulusSpec] = []
@@ -242,8 +243,62 @@ def load_stimulus_catalog(
     catalog_path: Path,
     *,
     monkey: str,
-    bar_length_deg: float = 0.3,
+    bar_length_deg: float = 1.0,
 ) -> pd.DataFrame:
     df = pd.read_csv(catalog_path)
     specs = parse_stimulus_rows(df, monkey=monkey, bar_length_deg=bar_length_deg)
     return pd.DataFrame([spec.__dict__ for spec in specs])
+
+
+def stimulus_spec_from_mapping(row: dict) -> StimulusSpec:
+    """Build a :class:`StimulusSpec` from a catalog / manifest row dict."""
+    data = dict(row)
+    for key in (
+        "rgb",
+        "letter",
+        "source_path",
+        "background_gray",
+        "cortex_file",
+        "size_deg",
+    ):
+        val = data.get(key, None)
+        if val is None:
+            data[key] = None
+        elif isinstance(val, float) and np.isnan(val):
+            data[key] = None
+        elif isinstance(val, str) and val.strip().lower() in {"", "nan", "none"}:
+            data[key] = None
+    rgb = data.get("rgb")
+    if isinstance(rgb, (list, tuple, np.ndarray)):
+        data["rgb"] = tuple(int(x) for x in rgb)
+    if data.get("background_gray") is not None:
+        data["background_gray"] = int(data["background_gray"])
+    allowed = {f.name for f in fields(StimulusSpec)}
+    return StimulusSpec(**{k: data[k] for k in allowed if k in data})
+
+
+def load_full_encoder_catalog(
+    encoder_data_root: Path,
+    *,
+    monkey: str,
+    bar_length_deg: float = 1.0,
+    letters_root: Path | None = None,
+) -> pd.DataFrame:
+    """Shapes CSV plus contrast-curve / letter catalog (exclusions applied)."""
+    from src.stimuli.contrast_letters_catalog import (
+        contrast_letters_catalog_path,
+        load_contrast_letters_catalog,
+    )
+
+    catalog_path = monkey_catalog_path(encoder_data_root, monkey)
+    parsed = load_stimulus_catalog(
+        catalog_path, monkey=monkey, bar_length_deg=bar_length_deg
+    )
+    contrast_path = contrast_letters_catalog_path(encoder_data_root)
+    if contrast_path is None:
+        return parsed
+    letters = letters_root if letters_root is not None else encoder_data_root / "letters_stimuli"
+    extra = load_contrast_letters_catalog(
+        contrast_path, monkey=monkey, letters_root=letters
+    )
+    return pd.concat([parsed, extra], ignore_index=True)

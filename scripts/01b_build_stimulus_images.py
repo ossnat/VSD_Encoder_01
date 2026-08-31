@@ -57,7 +57,7 @@ def _render_config(cfg: dict) -> RenderConfig:
         pixels_per_deg=float(pixels_per_deg),
         quadrant_extent_deg=quadrant_extent_deg,
         background_gray=int(cfg.get("background_gray", 128)),
-        bar_length_deg=float(cfg.get("bar_length_deg", 0.3)),
+        bar_length_deg=float(cfg.get("bar_length_deg", 1.0)),
         bar_width_px=int(cfg.get("bar_width_px", 1)),
         contour_width_px=int(cfg.get("contour_width_px", 1)),
         assume_size_is_diameter=bool(cfg.get("assume_size_is_diameter", True)),

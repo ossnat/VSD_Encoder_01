@@ -1,0 +1,26 @@
+# Single-set form of the 20/11/2018 parameters (same numbers as
+# configs/schira/sets.yaml → 201118). Prefer the registry:
+#   --schira-config configs/schira/sets.yaml --set 201118
+
+set_name: 201118
+date_prefix: "201118"
+csv_date: "20/11/2018"
+
+schira:
+  a: 0.72
+  alpha: 1.5
+  k: 1.0
+  shear: double_sech
+  fa_combine: power
+  sech_ecc_k: 0.76
+  sech_amp: 0.1821
+
+# VSD-peak-aligned Phase 0 sanity values (see configs/schira/sets.yaml notes).
+# Still needs_confirmation vs original MATLAB registration.
+affine:
+  needs_confirmation: true
+  origin_xy: [32.2, 28.7]
+  pixels_per_unit: 25.0
+  rotation_deg: 0.0
+  flip_u: false
+  flip_v: false

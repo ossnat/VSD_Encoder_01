@@ -60,6 +60,8 @@ def evaluate_pixel_correlation_run(
     split: str = "test",
     feature_layer: str | None = None,
     dual_roi: bool = True,
+    orig_recon_vmin: float | None = None,
+    orig_recon_vmax: float | None = None,
 ) -> dict:
     repo = repo or project_root()
     monkey = cfg["monkey"]
@@ -204,6 +206,8 @@ def evaluate_pixel_correlation_run(
             f"RMSE = {metrics['rmse_mean_maps']:.4f} | "
             f"T = {metrics['n_test_trials']}"
         ),
+        vmin=orig_recon_vmin,
+        vmax=orig_recon_vmax,
     )
 
     dual_csv_rel: str | None = None
@@ -338,11 +342,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=True,
         help="Also write per-stimulus disk vs ROI dual metrics CSV (default: on)",
     )
+    parser.add_argument(
+        "--orig-recon-vmin",
+        type=float,
+        default=None,
+        help=(
+            "Optional fixed vmin for orig+recon mean maps (must pair with "
+            "--orig-recon-vmax). Default: independent 1-99 percentiles."
+        ),
+    )
+    parser.add_argument(
+        "--orig-recon-vmax",
+        type=float,
+        default=None,
+        help="Optional fixed vmax for orig+recon mean maps.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if (args.orig_recon_vmin is None) != (args.orig_recon_vmax is None):
+        raise SystemExit(
+            "--orig-recon-vmin and --orig-recon-vmax must be set together"
+        )
     cfg = _merge_config(args.config, args.window, args.ridge_config)
     if args.monkey is not None:
         cfg["monkey"] = args.monkey
@@ -352,6 +375,8 @@ def main(argv: list[str] | None = None) -> int:
         split=args.split,
         feature_layer=args.feature_layer,
         dual_roi=bool(args.dual_roi),
+        orig_recon_vmin=args.orig_recon_vmin,
+        orig_recon_vmax=args.orig_recon_vmax,
     )
     return 0
 

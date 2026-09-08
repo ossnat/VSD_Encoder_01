@@ -34,17 +34,20 @@ Configured in `configs/stimuli/default.yaml`:
 
 | Parameter | Default |
 |-----------|---------|
-| Canvas | 224×224 RGB — **lower-right quadrant only** (fixation at top-left) |
-| Background | gray **RGB (128, 128, 128)** — uniform for all stimuli (shapes, letters, contrast curves) |
+| Canvas | 210×210 RGB — **lower-right quadrant only** (fixation at top-left) |
+| Background | gray **RGB (128, 128, 128)** — uniform for all stimuli |
 | Fixation | **not drawn** |
-| Quadrant extent | 6° right × 6° down from fixation (224 px = 6°) |
-| Scale | 1° diameter = `canvas_size / 6` px (~37.3 px); 0.5° = half that |
+| Quadrant extent | 6° right × 6° down from fixation |
+| Scale | **1° = 35 px**; canvas = 6° × 35 px |
+| Stimulus position | Catalog coords = **center** of stimulus (deg), e.g. `(0.6, −0.75)` |
+| Letters | **1° × 1°** box (`size_deg` = side); center **0.5°** from each edge |
 | Contour width | 1 px |
-| Bar length | 0.3° (same as circle diameter; centered at `Stimulus Position`) |
+| Bar length | 1° (centered at position) |
 | Bar width | 1 px |
-| Size convention | values in CSV treated as **diameter** |
+| Size convention (shapes) | CSV values treated as **diameter** |
 
-A 1° circle spans one sixth of the canvas width; a 0.5° circle is half that diameter, matching methods figures.
+Example: position `(0.6, −0.75)` → center at 21 px right, 26.25 px down from fixation;
+a 1° letter box spans ±17.5 px (0.5°) around that center.
 
 Supported shapes parsed from the `stimulus (need to check r/d)` column:
 

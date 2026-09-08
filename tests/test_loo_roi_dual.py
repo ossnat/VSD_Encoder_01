@@ -247,6 +247,29 @@ def test_filter_folds_excluding_train_only_dates():
     assert filter_folds_excluding_train_only_dates(folds, []) == folds
 
 
+def test_strip_train_only_from_protocol_b_test():
+    from src.loo.folds import strip_train_only_from_protocol_b_test
+
+    pairs = _toy_pairs()
+    folds = build_protocol_b_folds(pairs, ["white_point_0.1"])
+    assert len(folds) == 1
+    spec, fold_df = folds[0]
+    n_test_before = spec.n_test
+    assert set(fold_df.loc[fold_df["loo_split"] == "test", "date"].astype(str)) == {
+        "d1",
+        "d2",
+    }
+    stripped = strip_train_only_from_protocol_b_test(folds, ["d1"])
+    assert len(stripped) == 1
+    spec2, fold2 = stripped[0]
+    assert spec2.n_test < n_test_before
+    assert set(fold2.loc[fold2["loo_split"] == "test", "date"].astype(str)) == {"d2"}
+    # Held-out stimulus never re-enters train/val.
+    assert (
+        fold2.loc[fold2["stimulus_id"] == "white_point_0.1", "loo_split"] == "test"
+    ).all()
+
+
 def test_load_heldout_config_train_only_sessions(tmp_path: Path):
     path = tmp_path / "heldout.yaml"
     path.write_text(

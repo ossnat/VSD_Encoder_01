@@ -1,12 +1,15 @@
 # Stimulus rendering defaults (see docs/stimulus_rendering.md).
 #
 # Canvas = lower-right visual-field quadrant only (fixation at top-left corner).
-# 224×224 px = 6° × 6° → pixels_per_deg = 224/6.
-# Example: 1 deg circle → ~37.3 px; 0.5 deg → ~18.7 px; 0.3 deg → ~11.2 px.
+# Lab scale: 1° = 35 px. Quadrant = 6° × 6° → 210×210 px canvas.
+#
+# Catalog ``Stimulus Position`` / Target Location = **center** of the stimulus
+# (e.g. (0.6, −0.75) deg). Letters sit in a 1°×1° square: center is 0.5° from
+# each edge; ``size_deg`` from the letter catalog is that box side (typically 1°).
 
-canvas_size: 224
+canvas_size: 210
 quadrant_extent_deg: 6.0
-pixels_per_deg: 37.333333333333336
+pixels_per_deg: 35.0
 background_gray: 128
 # Fallback / canonical bar length (all catalog bars are 1°).
 bar_length_deg: 1.0
@@ -14,3 +17,5 @@ bar_width_px: 1
 contour_width_px: 1
 assume_size_is_diameter: true
 draw_fixation: false
+# Default letter bounding square side when catalog omits size (deg).
+letter_box_deg: 1.0

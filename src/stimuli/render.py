@@ -14,9 +14,9 @@ from src.stimuli.catalog import StimulusSpec
 
 @dataclass(frozen=True)
 class RenderConfig:
-    canvas_size: int = 224
-    # 224×224 input = 6° × 6° lower-right quadrant (fixation at top-left).
-    pixels_per_deg: float = 224.0 / 6.0
+    canvas_size: int = 210
+    # Lower-right quadrant: fixation at top-left. Lab scale 1° = 35 px, 6° field.
+    pixels_per_deg: float = 35.0
     quadrant_extent_deg: float = 6.0
     background_gray: int = 128
     bar_length_deg: float = 1.0
@@ -24,6 +24,7 @@ class RenderConfig:
     contour_width_px: int = 1
     assume_size_is_diameter: bool = True
     draw_fixation: bool = False
+    letter_box_deg: float = 1.0
 
 
 def _color_rgb(spec: StimulusSpec) -> tuple[int, int, int]:
@@ -147,13 +148,15 @@ def _render_letter_on_quadrant(spec: StimulusSpec, cfg: RenderConfig) -> np.ndar
     """
     Place a letter on the lower-right quadrant canvas.
 
-    Catalog ``size_deg`` is the diameter of the circle that contains the letter
-    (1° → center is 0.5° from the edges). The glyph is scaled to fit that
-    diameter and centered at the swapped Target Location
-    (``pos_x_deg``, ``pos_y_deg``). Fixation is the top-left of this quadrant.
+    Catalog ``size_deg`` is the **side** of the letter bounding square (typically
+    1°): top↔bottom and left↔right span ``size_deg``, so the center
+    ``(pos_x_deg, pos_y_deg)`` is ``size_deg/2`` from each edge. The glyph is
+    scaled to fit inside that square and centered on the position. Fixation is
+    the top-left of this quadrant.
     """
-    if spec.source_path is None or spec.size_deg is None:
-        raise ValueError(f"Letter stimulus missing source/size: {spec.stimulus_text}")
+    if spec.source_path is None:
+        raise ValueError(f"Letter stimulus missing source: {spec.stimulus_text}")
+    box_deg = spec.size_deg if spec.size_deg is not None else cfg.letter_box_deg
     path = Path(spec.source_path)
 
     if path.suffix.lower() == ".bmp":
@@ -181,10 +184,10 @@ def _render_letter_on_quadrant(spec: StimulusSpec, cfg: RenderConfig) -> np.ndar
         color=(cfg.background_gray, cfg.background_gray, cfg.background_gray),
     )
 
-    # Diameter of the 1° letter circle → longest glyph side fits that diameter.
-    diameter_px = max(1, int(round(_deg_to_px(spec.size_deg, cfg))))
+    # 1° box side in px (e.g. 35 px at 35 px/deg); glyph fits inside the square.
+    box_px = max(1.0, _deg_to_px(box_deg, cfg))
     gh, gw = glyph.shape[:2]
-    scale = diameter_px / float(max(gh, gw))
+    scale = min(box_px / gw, box_px / gh)
     new_w = max(1, int(round(gw * scale)))
     new_h = max(1, int(round(gh * scale)))
     glyph_img = Image.fromarray(glyph, mode="RGB").resize(

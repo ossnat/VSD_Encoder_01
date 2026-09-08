@@ -40,7 +40,10 @@ sets:
       flip_v: false
 
   # Calendar 10/07/2018 → repo prefix 100718 (sessions a,b in catalog).
-  # Phase 0 has NOT been run for this set.
+  # Session camera: frozen isotropic scale + rotation + shift from all
+  # Gandalf landmarks. Use this for experiments. Report two-point maps are
+  # separate (overlay --placement report).
+  # Source: experiments/schira2007/phase_0_register/affine_fit__100718__gandalf_rigid.yaml
   "100718":
     date_prefix: "100718"
     csv_date: "10/7/2018"
@@ -51,14 +54,11 @@ sets:
       shear: double_sech
       fa_combine: power
       sech_ecc_k: 0.76
-      # Same sech_amp choice as 201118 (see comment there).
       sech_amp: 0.1821
-    # Placeholder only — do not treat as a fitted 100718 affine. Not updated
-    # with the 201118 VSD-peak alignment above.
     affine:
       needs_confirmation: true
-      origin_xy: [50.0, 20.0]
-      pixels_per_unit: 45.0
-      rotation_deg: 0.0
-      flip_u: false
+      origin_xy: [-24.86435965371802, 29.59013974326728]
+      pixels_per_unit: 78.74919197620332
+      rotation_deg: 139.62221084973177
+      flip_u: true
       flip_v: false

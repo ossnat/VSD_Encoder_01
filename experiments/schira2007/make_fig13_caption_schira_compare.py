@@ -119,7 +119,7 @@ def _load_yaml(path: Path) -> dict:
         return yaml.safe_load(f) or {}
 
 
-def _render_config(stimuli_cfg: dict, *, canvas_size: int = 672) -> RenderConfig:
+def _render_config(stimuli_cfg: dict, *, canvas_size: int = 630) -> RenderConfig:
     base_canvas = int(stimuli_cfg.get("canvas_size", 224))
     quadrant_extent_deg = float(stimuli_cfg.get("quadrant_extent_deg", 6.0))
     base_ppd = stimuli_cfg.get("pixels_per_deg")
@@ -210,7 +210,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--schira-config", type=Path, default=DEFAULT_SCHIRA)
     p.add_argument("--thesis-page", type=Path, default=THESIS_PAGE)
     p.add_argument("--output-dir", type=Path, default=OUT_DIR)
-    p.add_argument("--canvas-size", type=int, default=672)
+    p.add_argument("--canvas-size", type=int, default=630)
     args = p.parse_args(argv)
 
     repo = project_root()

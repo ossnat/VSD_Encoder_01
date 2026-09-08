@@ -6,8 +6,7 @@ Lab / thesis form::
     P = α * θ                        # angular compression
     s_P = sech(P)
     s_E = sech(log(E / a) * sech_ecc_k)
-    f_a = s_P ** (s_E * sech_amp)      # default fa_combine=power (Schira 2007 eq.5)
-    #   or s_P * s_E * sech_amp        # fa_combine=product (ablation)
+    f_a = s_P ** (s_E * sech_amp)      # Schira 2007 eq.5 (power / superscript)
     w(E, P) = k * log(E * exp(i * P * f_a) + a)
 
 Defaults ``sech_ecc_k = 0.76``, ``sech_amp = 0.1821``. Both YAML-overridable.
@@ -17,8 +16,8 @@ Schira 2007 (J Neurophysiol eq. 5): PDF typography has the second sech
 
     fa = sech(P) ** ( sech{log(E/a)*S1} * S2 )
 
-(with S1=0.76, S2≈0.18). Flat text extracts look like juxtaposition and
-are misleading. ``fa_combine=product`` remains as an ablation.
+(with S1=0.76, S2≈0.18). Flat-text “product / mult” readings
+(``fa = sech(P) * sech(E) * S2``) are wrong and are not implemented.
 
 ``θ`` and ``P`` are always radians. ``E`` is eccentricity in degrees.
 ``shear="constant"`` (``f_a = α``) is ablation only.
@@ -39,12 +38,10 @@ _DOUBLE_SECH_MODES = frozenset(
 )
 _SHEAR_MODES = _DOUBLE_SECH_MODES | {SHEAR_CONSTANT}
 
-# How the two sech factors are combined inside f_a (YAML ``fa_combine``).
-# - power:   fa = sech(P) ** (sech(log(E/a)*S1) * S2)   (Schira 2007 eq.5 superscript)
-# - product: fa = sech(P) *  sech(log(E/a)*S1) * S2     (ablation / flat-text reading)
+# YAML ``fa_combine`` is power only (Schira 2007 eq.5 superscript).
 FA_COMBINE_POWER = "power"
-FA_COMBINE_PRODUCT = "product"
-_FA_COMBINE_MODES = frozenset({FA_COMBINE_POWER, FA_COMBINE_PRODUCT})
+_FA_COMBINE_REMOVED = frozenset({"product", "mult", "multiply", "mul"})
+_FA_COMBINE_MODES = frozenset({FA_COMBINE_POWER})
 
 # Schira 2010 algebraic defaults when YAML omits the keys.
 DEFAULT_SECH_ECC_K = 0.76
@@ -53,7 +50,7 @@ DEFAULT_FA_COMBINE = FA_COMBINE_POWER
 
 _E_MIN = 1e-12
 _BRANCH_RE_MIN = 1e-12
-# Peak of P sech(P): P tanh(P) = 1. Beyond this, product-mode fa is not injective in P.
+# Peak of P sech(P): P tanh(P) = 1. Used as a Newton start for the power inverse.
 _P_SECH_PEAK = 1.199678640257858
 
 
@@ -82,10 +79,16 @@ class SchiraParams:
             raise ValueError(
                 f"shear must be one of {sorted(_SHEAR_MODES)}, got {self.shear!r}"
             )
-        if self.fa_combine not in _FA_COMBINE_MODES:
+        mode = str(self.fa_combine).lower()
+        if mode in _FA_COMBINE_REMOVED:
             raise ValueError(
-                f"fa_combine must be one of {sorted(_FA_COMBINE_MODES)}, "
-                f"got {self.fa_combine!r}"
+                "fa_combine product/mult is not implemented. "
+                "Schira 2007 eq.5 is power only: "
+                "fa = sech(P) ** (sech(log(E/a)*S1) * S2)."
+            )
+        if mode not in _FA_COMBINE_MODES:
+            raise ValueError(
+                f"fa_combine must be {FA_COMBINE_POWER!r}, got {self.fa_combine!r}"
             )
 
 
@@ -133,9 +136,8 @@ def shear_fa(
 
         s_P = sech(P)
         s_E = sech(log(E / a) * sech_ecc_k)
-        power:   f_a = s_P ** (s_E * sech_amp)
-                 # Schira 2007 eq.5 typography: whole (sech{...}*S2) is the exponent
-        product: f_a = s_P * s_E * sech_amp
+        f_a = s_P ** (s_E * sech_amp)
+        # Schira 2007 eq.5: whole (sech{...}*S2) is the exponent
 
     Constant shear: ``f_a = α`` (ignores ``P``; ablation only).
     """
@@ -149,10 +151,8 @@ def shear_fa(
     p = np.asarray(compressed_polar_rad, dtype=np.float64)
     s_p = _sech(p)
     s_e = _sech(np.log(ecc / params.a) * params.sech_ecc_k)
-    if params.fa_combine == FA_COMBINE_POWER:
-        # sech(P) in (0, 1]; exponent s_E*S2 is positive.
-        return np.power(s_p, s_e * params.sech_amp)
-    return s_p * s_e * params.sech_amp
+    # sech(P) in (0, 1]; exponent s_E*S2 is positive.
+    return np.power(s_p, s_e * params.sech_amp)
 
 
 def _sheared_z(
@@ -211,9 +211,7 @@ def _inverse_theta_double_sech(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Invert ``angle(z) = P f_a(E,P)`` on the injective ``|P|`` branch.
 
-    Product mode: ``angle = P sech(P) C(E)`` with ``C = sech(log)·amp``.
-    Power mode:   ``angle = P sech(P)^{s_E} amp`` with ``s_E = sech(log)``.
-
+    Power: ``angle = P sech(P)^{s_E · S2}`` with ``s_E = sech(log(E/a)·S1)``.
     Samples outside the injective range return NaN (do **not** clip onto
     the peak ridge).
     """
@@ -223,36 +221,22 @@ def _inverse_theta_double_sech(
     s_e = _sech(log_term)
     amp = max(float(params.sech_amp), 1e-12)
 
-    if params.fa_combine == FA_COMBINE_POWER:
-        # angle = P * sech(P)^(s_E * S2)
-        exponent = s_e * amp
-        rhs = target
-        p = np.sign(rhs) * np.minimum(np.abs(rhs), _P_SECH_PEAK)
-        # Peak of P sech(P)^exp where exp = s_E*S2 ≪ 1 is farther out.
-        p_lim = np.maximum(_P_SECH_PEAK, 1.0 / np.maximum(exponent, 0.05))
-        p_lim = np.minimum(p_lim, 12.0)
-        p = np.clip(p, -p_lim, p_lim)
-        for _ in range(30):
-            sech_p = _sech(p)
-            g = p * np.power(sech_p, exponent) - rhs
-            gp = np.power(sech_p, exponent) * (1.0 - exponent * p * np.tanh(p))
-            gp = np.where(np.abs(gp) < 1e-10, 1e-10, gp)
-            p = np.clip(p - g / gp, -p_lim, p_lim)
-        resid = np.abs(p * np.power(_sech(p), exponent) - rhs)
-        reachable = np.isfinite(resid) & (resid < 1e-6)
-    else:
-        c_e = np.maximum(s_e * amp, 1e-12)
-        rhs = target / c_e
-        f_max = float(_P_SECH_PEAK * _sech(np.array(_P_SECH_PEAK)))
-        reachable = np.abs(rhs) <= f_max * (1.0 - 1e-12)
-        rhs_safe = np.where(reachable, rhs, 0.0)
-        p = np.clip(rhs_safe, -_P_SECH_PEAK, _P_SECH_PEAK)
-        for _ in range(20):
-            sech_p = _sech(p)
-            g = p * sech_p - rhs_safe
-            gp = sech_p * (1.0 - p * np.tanh(p))
-            gp = np.where(np.abs(gp) < 1e-10, 1e-10, gp)
-            p = np.clip(p - g / gp, -_P_SECH_PEAK, _P_SECH_PEAK)
+    # angle = P * sech(P)^(s_E * S2)
+    exponent = s_e * amp
+    rhs = target
+    p = np.sign(rhs) * np.minimum(np.abs(rhs), _P_SECH_PEAK)
+    # Peak of P sech(P)^exp where exp = s_E*S2 ≪ 1 is farther out.
+    p_lim = np.maximum(_P_SECH_PEAK, 1.0 / np.maximum(exponent, 0.05))
+    p_lim = np.minimum(p_lim, 12.0)
+    p = np.clip(p, -p_lim, p_lim)
+    for _ in range(30):
+        sech_p = _sech(p)
+        g = p * np.power(sech_p, exponent) - rhs
+        gp = np.power(sech_p, exponent) * (1.0 - exponent * p * np.tanh(p))
+        gp = np.where(np.abs(gp) < 1e-10, 1e-10, gp)
+        p = np.clip(p - g / gp, -p_lim, p_lim)
+    resid = np.abs(p * np.power(_sech(p), exponent) - rhs)
+    reachable = np.isfinite(resid) & (resid < 1e-6)
     theta = p / params.alpha
     ecc_out = np.where(reachable, ecc, np.nan)
     theta_out = np.where(reachable, theta, np.nan)
@@ -291,3 +275,33 @@ def inverse_schira(
 def fovea_w(params: SchiraParams) -> complex:
     """Cortical coordinate of the fovea (``E = 0``)."""
     return complex(params.k * np.log(params.a), 0.0)
+
+
+def cortical_uv_to_visual_deg(
+    u: np.ndarray | float,
+    v: np.ndarray | float,
+    params: SchiraParams,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Invert cortical ``(u, v)`` to visual-field degrees.
+
+    Full inverse of Double-Sech: ``z = exp(w/k) - a``, then undo ``P f_a``.
+    On the horizontal meridian (``v = 0``) this is the monopole radial inverse::
+
+        E = exp(u / k) - a
+          = a * (exp((u - k log a) / k) - 1)
+
+    The second line is the Ayzenshtat / Schwartz form with the origin shifted
+    so the fovea is at ``u' = 0``. Polar angle is **not** ``P = v/k`` near the
+    fovea (``a`` is comparable to ``E``); shear is inverted numerically.
+
+    Returns
+    -------
+    ecc_deg, theta_deg, x_deg, y_deg
+        ``theta_deg`` from ``atan2(y, x)``: HM = 0, lower field negative.
+    """
+    u_a = np.asarray(u, dtype=np.float64)
+    v_a = np.asarray(v, dtype=np.float64)
+    u_a, v_a = np.broadcast_arrays(u_a, v_a)
+    ecc, theta = inverse_schira(u_a + 1j * v_a, params)
+    x_deg, y_deg = polar_to_cartesian(ecc, theta)
+    return ecc, np.rad2deg(theta), x_deg, y_deg

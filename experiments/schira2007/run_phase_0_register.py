@@ -882,8 +882,8 @@ def main() -> None:
     p.add_argument(
         "--schira-canvas-size",
         type=int,
-        default=672,
-        help="Stimulus render size for Schira ink cloud (--pick-schira; default 672)",
+        default=630,
+        help="Stimulus render size for Schira ink cloud (--pick-schira; 210×3=630)",
     )
     p.add_argument(
         "--fit",

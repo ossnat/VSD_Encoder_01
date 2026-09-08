@@ -16,8 +16,8 @@ scripts/py experiments/schira2007/run_schira_only.py --set 201118 --overwrite
 ```
 
 **Figures:** `experiments/schira2007/phase_0_schira/`  
-One PNG per stimulus: ink pixels only, forward-mapped through Schira onto
-Cartesian cortical ``(u, v)``. Montage: `all_stimuli_schira_only_montage.png`.
+Per stimulus: **VF render | forward ink scatter | inverse warp on (u,v)**.
+Montage: `all_stimuli_schira_only_montage.png` (forward scatter only).
 
 ```bash
 scripts/py experiments/schira2007/run_schira_only.py --set 201118 \
@@ -160,8 +160,8 @@ Schira 2007 eq. 5 (power / superscript form)::
     w(E, P) = k * log(E * exp(i * P * fa) + a)
 
 YAML: ``fa_combine: power``, ``sech_ecc_k`` = S1 (= 0.76),
-``sech_amp`` = S2 (= **0.1821**). Flat-text “product” readings and
-``sech_amp: 1.821`` are ablations only.
+``sech_amp`` = S2 (= **0.1821**). Product / mult combination of the sech
+terms is not implemented.
 
 ## Phase 1 reuse
 

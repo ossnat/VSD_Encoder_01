@@ -30,8 +30,10 @@ from src.DL_features.gabor_gwp import build_gabor_gwp_extractor
 FEATURE_LAYERS: tuple[str, ...] = ("layer1", "layer2", "layer3", "layer4", "avgpool")
 DEFAULT_FEATURE_LAYER = "layer3"
 
-# VGG16 base taps: after each stage MaxPool (post-ReLU of last conv in that block).
+# VGG16 base taps: after each stage MaxPool (post-ReLU of last conv in that block),
+# plus ``block1_prepool`` = after the 2nd conv+ReLU of block1 (still 224×224).
 VGG_BASE_LAYERS: tuple[str, ...] = (
+    "block1_prepool",
     "block1",
     "block2",
     "block3",
@@ -48,8 +50,10 @@ VGG_POOLED_LAYERS: tuple[str, ...] = (
     "block3_pool14",
 )
 VGG_FEATURE_LAYERS: tuple[str, ...] = VGG_BASE_LAYERS + VGG_POOLED_LAYERS
-# Index of the MaxPool ending each VGG16 features stage.
+# Index into ``vgg16.features`` for the tap (inclusive).
+# Block1: Conv-ReLU-Conv-ReLU-MaxPool → cuts 3 (pre-pool) and 4 (post-pool).
 _VGG16_BLOCK_CUTS: dict[str, int] = {
+    "block1_prepool": 3,
     "block1": 4,
     "block2": 9,
     "block3": 16,
@@ -61,7 +65,7 @@ DEFAULT_VGG_FEATURE_LAYER = "block4"
 
 def parse_vgg_feature_layer(feature_layer: str) -> tuple[str, int | None]:
     """
-    Parse ``blockN``, ``avgpool``, or ``blockN_pool{M}``.
+    Parse ``blockN``, ``block1_prepool``, ``avgpool``, or ``blockN_pool{M}``.
 
     Returns (base_layer, pool_size_or_None).
     """
@@ -74,6 +78,11 @@ def parse_vgg_feature_layer(feature_layer: str) -> tuple[str, int | None]:
             raise ValueError(
                 f"Unsupported VGG feature_layer={feature_layer!r}. "
                 f"Use block1_pool7 / block2_pool14 style names."
+            )
+        if base == "block1_prepool":
+            raise ValueError(
+                "Pooling aliases are only for post-MaxPool blocks "
+                "(e.g. block1_pool7), not block1_prepool."
             )
         return base, int(size_str)
     raise ValueError(

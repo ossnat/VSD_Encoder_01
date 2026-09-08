@@ -137,6 +137,63 @@ def filter_folds_excluding_train_only_dates(
     ]
 
 
+def _session_key_series(df: pd.DataFrame) -> pd.Series:
+    """Prefer ``h5_session``, else ``date``, as the session-date key."""
+    if "h5_session" in df.columns:
+        return df["h5_session"].astype(str)
+    if "date" in df.columns:
+        return df["date"].astype(str)
+    raise KeyError("fold frame needs h5_session or date for train-only filtering")
+
+
+def strip_train_only_from_protocol_b_test(
+    folds: list[tuple[FoldSpec, pd.DataFrame]],
+    train_only_sessions: Sequence[str],
+) -> list[tuple[FoldSpec, pd.DataFrame]]:
+    """
+    Protocol B: drop train-only session rows from **test** only.
+
+    Held-out ``stimulus_id`` trials on those sessions are removed from the fold
+    entirely (they are never in train/val under Protocol B). Other stimuli on
+    train-only sessions remain in train/val.
+    """
+    skip = {str(d) for d in train_only_sessions if str(d).strip()}
+    if not skip:
+        return folds
+    out: list[tuple[FoldSpec, pd.DataFrame]] = []
+    for spec, fold_df in folds:
+        sess = _session_key_series(fold_df)
+        drop = (fold_df["loo_split"] == "test") & sess.isin(skip)
+        if not bool(drop.any()):
+            out.append((spec, fold_df))
+            continue
+        kept = fold_df.loc[~drop].copy()
+        n_test = int((kept["loo_split"] == "test").sum())
+        if n_test == 0:
+            continue
+        note = spec.notes or ""
+        extra = f"stripped train-only test sessions {sorted(skip)}"
+        notes = f"{note}; {extra}" if note else extra
+        out.append(
+            (
+                FoldSpec(
+                    protocol=spec.protocol,
+                    fold_id=spec.fold_id,
+                    heldout_stimulus_id=spec.heldout_stimulus_id,
+                    heldout_date=spec.heldout_date,
+                    heldout_condition=spec.heldout_condition,
+                    n_train=int((kept["loo_split"] == "train").sum()),
+                    n_val=int((kept["loo_split"] == "val").sum()),
+                    n_test=n_test,
+                    leakage_ok=spec.leakage_ok,
+                    notes=notes,
+                ),
+                kept,
+            )
+        )
+    return out
+
+
 def _inner_train_val_split(
     remainder: pd.DataFrame,
     *,

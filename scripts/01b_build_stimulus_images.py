@@ -62,6 +62,7 @@ def _render_config(cfg: dict) -> RenderConfig:
         contour_width_px=int(cfg.get("contour_width_px", 1)),
         assume_size_is_diameter=bool(cfg.get("assume_size_is_diameter", True)),
         draw_fixation=bool(cfg.get("draw_fixation", False)),
+        letter_box_deg=float(cfg.get("letter_box_deg", 1.0)),
     )
 
 

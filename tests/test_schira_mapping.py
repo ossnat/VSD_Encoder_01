@@ -12,12 +12,9 @@ from src.retinotopy.register import (
 )
 from src.retinotopy.schira import (
     FA_COMBINE_POWER,
-    FA_COMBINE_PRODUCT,
-    SHEAR_AYZENSHTAT,
     SHEAR_CONSTANT,
     SHEAR_DOUBLE_SECH,
     SchiraParams,
-    _P_SECH_PEAK,
     cartesian_to_polar,
     compressed_polar,
     forward_schira,
@@ -156,35 +153,33 @@ def test_round_trip_constant_shear():
 
 
 def test_round_trip_double_sech():
-    for combine in (FA_COMBINE_POWER, FA_COMBINE_PRODUCT):
-        params = SchiraParams(
-            a=0.72, alpha=1.5, k=1.0, shear=SHEAR_DOUBLE_SECH, fa_combine=combine
-        )
-        rng = np.random.default_rng(1)
-        # |α θ| must stay below the P sech(P) peak (~1.20) or the map folds.
-        theta_lim = 1.15 / params.alpha
-        ecc = rng.uniform(0.4, 5.0, size=50)
-        polar = rng.uniform(-theta_lim, -0.02, size=50)
-        x, y = polar_to_cartesian(ecc, polar)
-        w = forward_schira(ecc, polar, params)
-        e2, p2 = inverse_schira(w, params)
-        x2, y2 = polar_to_cartesian(e2, p2)
-        finite = np.isfinite(e2)
-        assert finite.sum() == ecc.size, combine
-        np.testing.assert_allclose(x2[finite], x[finite], atol=1e-6, rtol=1e-5)
-        np.testing.assert_allclose(y2[finite], y[finite], atol=1e-6, rtol=1e-5)
+    params = SchiraParams(
+        a=0.72, alpha=1.5, k=1.0, shear=SHEAR_DOUBLE_SECH, fa_combine=FA_COMBINE_POWER
+    )
+    rng = np.random.default_rng(1)
+    # |α θ| must stay below the P sech(P) peak (~1.20) or the map folds.
+    theta_lim = 1.15 / params.alpha
+    ecc = rng.uniform(0.4, 5.0, size=50)
+    polar = rng.uniform(-theta_lim, -0.02, size=50)
+    x, y = polar_to_cartesian(ecc, polar)
+    w = forward_schira(ecc, polar, params)
+    e2, p2 = inverse_schira(w, params)
+    x2, y2 = polar_to_cartesian(e2, p2)
+    finite = np.isfinite(e2)
+    assert finite.sum() == ecc.size
+    np.testing.assert_allclose(x2[finite], x[finite], atol=1e-6, rtol=1e-5)
+    np.testing.assert_allclose(y2[finite], y[finite], atol=1e-6, rtol=1e-5)
 
 
 def test_double_sech_letter_round_trip():
     """Catalog letter at (1.0, -0.9) deg is inside the injective P branch."""
-    for combine in (FA_COMBINE_POWER, FA_COMBINE_PRODUCT):
-        params = SchiraParams(a=0.72, alpha=1.5, k=1.0, fa_combine=combine)
-        ecc, theta = cartesian_to_polar(1.0, -0.9)
-        assert abs(params.alpha * theta) < 1.20
-        w = forward_schira(ecc, theta, params)
-        e2, th2 = inverse_schira(w, params)
-        x2, y2 = polar_to_cartesian(e2, th2)
-        np.testing.assert_allclose([x2, y2], [1.0, -0.9], atol=1e-7)
+    params = SchiraParams(a=0.72, alpha=1.5, k=1.0, fa_combine=FA_COMBINE_POWER)
+    ecc, theta = cartesian_to_polar(1.0, -0.9)
+    assert abs(params.alpha * theta) < 1.20
+    w = forward_schira(ecc, theta, params)
+    e2, th2 = inverse_schira(w, params)
+    x2, y2 = polar_to_cartesian(e2, th2)
+    np.testing.assert_allclose([x2, y2], [1.0, -0.9], atol=1e-7)
 
 
 def test_p_is_alpha_theta():
@@ -193,20 +188,24 @@ def test_p_is_alpha_theta():
     np.testing.assert_allclose(compressed_polar(theta, params), 1.5 * theta)
 
 
-def test_double_sech_fa_power_vs_product_at_hm():
-    """At P=0: power → 1**(...)=1; product → sech(log)*amp."""
-    p_power = SchiraParams(
+def test_double_sech_fa_power_is_one_on_hm():
+    """At P=0: sech(0)**(...) = 1."""
+    params = SchiraParams(
         a=0.72, alpha=1.5, k=1.0, fa_combine=FA_COMBINE_POWER, sech_amp=0.1821
     )
-    p_prod = SchiraParams(
-        a=0.72, alpha=1.5, k=1.0, fa_combine=FA_COMBINE_PRODUCT, sech_amp=0.1821
-    )
-    fa_pow = shear_fa(np.array([1.0]), np.array([0.0]), p_power)
-    fa_pro = shear_fa(np.array([1.0]), np.array([0.0]), p_prod)
-    s_e = 1.0 / np.cosh(np.log(1.0 / 0.72) * 0.76)
-    np.testing.assert_allclose(fa_pow, 1.0)
-    np.testing.assert_allclose(fa_pro, s_e * 0.1821)
-    assert p_power.fa_combine == FA_COMBINE_POWER
+    fa = shear_fa(np.array([1.0]), np.array([0.0]), params)
+    np.testing.assert_allclose(fa, 1.0)
+    assert params.fa_combine == FA_COMBINE_POWER
+
+
+def test_fa_combine_product_and_mult_are_rejected():
+    for bad in ("product", "mult", "multiply", "mul"):
+        try:
+            SchiraParams(a=0.72, alpha=1.5, k=1.0, fa_combine=bad)
+        except ValueError as exc:
+            assert "power" in str(exc).lower() or "not implemented" in str(exc).lower()
+        else:
+            raise AssertionError(f"expected ValueError for fa_combine={bad!r}")
 
 
 def test_schira2007_power_puts_s2_inside_exponent():
@@ -225,29 +224,10 @@ def test_schira2007_power_puts_s2_inside_exponent():
     assert not np.allclose(fa, wrong_old)
 
 
-def test_sech_amp_override_matches_published_1821():
-    params = SchiraParams(
-        a=0.72,
-        alpha=0.5,
-        k=1.0,
-        shear=SHEAR_AYZENSHTAT,
-        sech_amp=1.821,
-        fa_combine=FA_COMBINE_PRODUCT,
-    )
-    fa = shear_fa(np.array([1.0]), np.array([0.0]), params)
-    expected = (1.0 / np.cosh(np.log(1.0 / 0.72) * 0.76)) * 1.821
-    np.testing.assert_allclose(fa, expected)
-
-
-def test_forward_letter_cloud_area_needs_sech_amp_1821():
-    """Parafoveal letter at (1,-0.9) with α=1.5 collapses if sech_amp=0.1821.
-
-    Forward PCA aspect ≪ 0.1 and Im(w) span ≲ 0.03 → overlay is a curve.
-    sech_amp=1.821 restores a filled 2D cloud (aspect ≳ 0.2).
-    """
+def test_forward_letter_cloud_area_with_published_sech_amp():
+    """Parafoveal 1° disk at (1,-0.9) stays a filled 2D cloud under power fa."""
     from numpy.linalg import svd
 
-    # 1° disk of ink pixels around the catalog letter center.
     rng_x = np.linspace(0.55, 1.45, 25)
     rng_y = np.linspace(-1.35, -0.45, 25)
     xx, yy = np.meshgrid(rng_x, rng_y)
@@ -255,37 +235,21 @@ def test_forward_letter_cloud_area_needs_sech_amp_1821():
     x = xx[inside]
     y = yy[inside]
     ecc, theta = cartesian_to_polar(x, y)
-
-    collapsed = SchiraParams(
+    params = SchiraParams(
         a=0.72,
         alpha=1.5,
         k=1.0,
         sech_amp=0.1821,
-        fa_combine=FA_COMBINE_PRODUCT,
+        fa_combine=FA_COMBINE_POWER,
     )
-    filled = SchiraParams(
-        a=0.72,
-        alpha=1.5,
-        k=1.0,
-        sech_amp=1.821,
-        fa_combine=FA_COMBINE_PRODUCT,
-    )
-    for params, min_aspect, label in (
-        (collapsed, None, "0.1821"),
-        (filled, 0.2, "1.821"),
-    ):
-        w = forward_schira(ecc, theta, params)
-        ok = np.isfinite(w.real)
-        pts = np.column_stack([w.real[ok], w.imag[ok]])
-        _, s, _ = svd(pts - pts.mean(0), full_matrices=False)
-        aspect = float(s[1] / s[0])
-        v_span = float(w.imag[ok].max() - w.imag[ok].min())
-        if min_aspect is None:
-            assert aspect < 0.1, f"amp={label} should collapse, aspect={aspect}"
-            assert v_span < 0.05, f"amp={label} v_span={v_span}"
-        else:
-            assert aspect >= min_aspect, f"amp={label} aspect={aspect}"
-            assert v_span >= 0.15, f"amp={label} v_span={v_span}"
+    w = forward_schira(ecc, theta, params)
+    ok = np.isfinite(w.real)
+    pts = np.column_stack([w.real[ok], w.imag[ok]])
+    _, s, _ = svd(pts - pts.mean(0), full_matrices=False)
+    aspect = float(s[1] / s[0])
+    v_span = float(w.imag[ok].max() - w.imag[ok].min())
+    assert aspect >= 0.2, f"aspect={aspect}"
+    assert v_span >= 0.15, f"v_span={v_span}"
 
 
 def test_fill_stimulus_ink_holes_fills_letter_interior():
@@ -374,16 +338,12 @@ def test_inverse_outside_injective_branch_is_nan():
         a=0.72,
         alpha=1.5,
         k=1.0,
-        sech_amp=1.821,
-        fa_combine=FA_COMBINE_PRODUCT,
+        sech_amp=0.1821,
+        fa_combine=FA_COMBINE_POWER,
     )
-    # Build a z whose angle exceeds max |P sech(P) C(E)| at that E.
+    # Angle far beyond |P sech(P)^exp| at this E (power inverse must NaN).
     ecc = 1.3
-    c_e = float(
-        (1.0 / np.cosh(np.log(ecc / params.a) * params.sech_ecc_k)) * params.sech_amp
-    )
-    f_max = float(_P_SECH_PEAK * (1.0 / np.cosh(_P_SECH_PEAK)))
-    bad_angle = 1.5 * f_max * c_e
+    bad_angle = 8.0
     z = ecc * np.exp(1j * bad_angle)
     e, th = inverse_schira(params.k * np.log(z + params.a), params)
     assert np.isnan(e) and np.isnan(th)
@@ -519,10 +479,13 @@ def test_load_named_set_from_registry():
     assert params.sech_amp == 0.1821
     assert params.fa_combine == FA_COMBINE_POWER
     assert block["date_prefix"] == "201118"
-    assert affine.pixels_per_unit == 25.0
-    assert affine.origin_x == 32.2
-    assert affine.origin_y == 28.7
-    assert affine.needs_confirmation is True
+    np.testing.assert_allclose(affine.pixels_per_unit, 53.676406289148666)
+    np.testing.assert_allclose(affine.origin_x, -5.90836181632753)
+    np.testing.assert_allclose(affine.origin_y, 22.878432895128505)
+    np.testing.assert_allclose(affine.rotation_deg, 130.0061123284688)
+    assert affine.flip_u is True
+    assert affine.flip_v is False
+    assert affine.needs_confirmation is False
     name2, params2, _, block2 = load_schira_set(path, set_name="100718")
     assert name2 == "100718"
     assert params2.a == 0.74

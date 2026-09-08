@@ -8,6 +8,7 @@
 #   experiments/loo_encoding/*.py, slurm/protocol_A*.yaml  (LOO cluster pipeline)
 #   experiments/noise_ceiling_roi/nc_roi_utils.py  (shared NC helpers used by LOO)
 #   experiments/schira2007/*.py  (Schira Phase 0 driver)
+#   experiments/session_register/*.py, configs/*.yaml, SPEC.md
 #   experiments/noise_ceiling_roi/rois/global_noise_ceiling_hull__mask.npy
 #
 # IGNORE (local / regenerable):
@@ -46,24 +47,31 @@ experiments/**/logs/
 experiments/**/*.csv
 experiments/**/*.json
 experiments/**/*.txt
+*.parquet
 
 # Generated experiment YAML (ROIs, taxonomies, etc.); keep design heldout lists
 experiments/**/*.yaml
 experiments/**/*.yml
 !experiments/**/heldout_list.yaml
 !experiments/loo_encoding/slurm/protocol_A*.yaml
+!experiments/session_register/configs/*.yaml
 
 # Experiment scripts that create figures/reports
 experiments/**/*.py
 !experiments/loo_encoding/*.py
 !experiments/noise_ceiling_roi/nc_roi_utils.py
 !experiments/schira2007/*.py
+!experiments/session_register/*.py
 
 # Generated experiment markdown reports; keep orientation + human review notes
 experiments/**/*.md
 !experiments/**/README.md
 !experiments/**/STATUS.md
 !experiments/**/comments/**/*.md
+!experiments/session_register/SPEC.md
+
+# Temp leftovers from local tests
+tests/_tmp_*/
 
 # Other local / exploratory outputs
 exploratory/**/results/

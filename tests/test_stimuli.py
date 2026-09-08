@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -178,9 +180,9 @@ def test_point_size_ratio():
 
 
 def test_quadrant_degree_scale():
-    """224 px canvas = 6 deg; 1 deg diameter is twice 0.5 deg."""
-    ppd = 224.0 / 6.0
-    cfg = RenderConfig(canvas_size=224, pixels_per_deg=ppd, quadrant_extent_deg=6.0)
+    """210 px canvas = 6 deg at 35 px/deg; 1 deg diameter is twice 0.5 deg."""
+    ppd = 35.0
+    cfg = RenderConfig(canvas_size=210, pixels_per_deg=ppd, quadrant_extent_deg=6.0)
     d1 = _size_to_radius_px(1.0, cfg) * 2
     d05 = _size_to_radius_px(0.5, cfg) * 2
     assert d1 == pytest.approx(ppd, rel=0.01)
@@ -189,11 +191,57 @@ def test_quadrant_degree_scale():
 
 
 def test_quadrant_position_from_fixation():
-    ppd = 224.0 / 6.0
-    cfg = RenderConfig(canvas_size=224, pixels_per_deg=ppd, quadrant_extent_deg=6.0)
+    ppd = 35.0
+    cfg = RenderConfig(canvas_size=210, pixels_per_deg=ppd, quadrant_extent_deg=6.0)
     x_px, y_px = _deg_point_to_px(0.6, -0.75, cfg)
     assert x_px == pytest.approx(0.6 * ppd, rel=0.01)
     assert y_px == pytest.approx(0.75 * ppd, rel=0.01)
+
+
+def test_letter_box_one_degree_centered():
+    """1° letter square: center at catalog pos, ±0.5° to each edge."""
+    from PIL import Image as PILImage
+
+    letters = Path(__file__).resolve().parent / "_tmp_letter_box"
+    letters.mkdir(exist_ok=True)
+    bmp_path = letters / "Z.bmp"
+    # Solid 10×10 block — scaled into 1° box
+    arr = np.full((10, 10, 3), 128, dtype=np.uint8)
+    arr[2:8, 2:8] = 255
+    PILImage.fromarray(arr).save(bmp_path)
+
+    from src.stimuli.catalog import StimulusSpec
+
+    cfg = RenderConfig(canvas_size=210, pixels_per_deg=35.0)
+    spec = StimulusSpec(
+        monkey="gandalf",
+        csv_date="20/11/2018",
+        session_letter="a",
+        h5_session="201118a",
+        condition="condAN1",
+        condition_num=1,
+        stimulus_text="letter Z",
+        color="white",
+        shape_type="letter",
+        size_deg=1.0,
+        pos_x_deg=0.6,
+        pos_y_deg=-0.75,
+        is_blank=False,
+        cortex_file=None,
+        letter="Z",
+        source_path=str(bmp_path),
+    )
+    image = render_stimulus(spec, cfg)
+    ink = image[:, :, 0] > 200
+    ys, xs = np.where(ink)
+    cx_px, cy_px = _deg_point_to_px(0.6, -0.75, cfg)
+    half_px = 0.5 * cfg.pixels_per_deg
+    assert xs.min() >= int(round(cx_px - half_px)) - 1
+    assert xs.max() <= int(round(cx_px + half_px)) + 1
+    assert ys.min() >= int(round(cy_px - half_px)) - 1
+    assert ys.max() <= int(round(cy_px + half_px)) + 1
+    assert (xs.max() - xs.min()) <= int(round(cfg.pixels_per_deg)) + 1
+    assert (ys.max() - ys.min()) <= int(round(cfg.pixels_per_deg)) + 1
 
 
 def test_render_white_stimulus_rgb():
@@ -232,13 +280,13 @@ def test_render_stimulus_shape():
     )
     spec = parse_stimulus_rows(df, monkey="gandalf")[0]
     image = render_stimulus(spec, RenderConfig())
-    assert image.shape == (224, 224, 3)
+    assert image.shape == (210, 210, 3)
     assert image.dtype == np.uint8
 
 
 def test_triangle_contour_tip_points_right():
     """Equilateral triangle tip should point right (+x), not up."""
-    cfg = RenderConfig(canvas_size=224, pixels_per_deg=224.0 / 6.0)
+    cfg = RenderConfig(canvas_size=210, pixels_per_deg=35.0)
     spec = parse_stimulus_rows(
         pd.DataFrame(
             [

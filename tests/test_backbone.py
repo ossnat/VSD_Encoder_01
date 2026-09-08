@@ -47,6 +47,7 @@ def test_vgg16_early_block_pooling():
     cfg = {"type": "vgg", "name": "vgg16", "pretrained": False}
     x = torch.randn(1, 3, 224, 224)
     expected = {
+        "block1_prepool": (1, 64, 224, 224),
         "block1": (1, 64, 112, 112),
         "block1_pool7": (1, 64, 7, 7),
         "block1_pool14": (1, 64, 14, 14),
@@ -67,6 +68,7 @@ def test_parse_vgg_feature_layer():
     from src.DL_features.backbone import parse_vgg_feature_layer
 
     assert parse_vgg_feature_layer("block4") == ("block4", None)
+    assert parse_vgg_feature_layer("block1_prepool") == ("block1_prepool", None)
     assert parse_vgg_feature_layer("block1_pool7") == ("block1", 7)
     assert parse_vgg_feature_layer("block2_pool14") == ("block2", 14)
 

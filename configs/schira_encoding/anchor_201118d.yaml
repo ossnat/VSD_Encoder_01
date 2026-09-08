@@ -1,0 +1,29 @@
+# Schira-geometry encoding with true 201118 Schira + camera affine.
+# Anchor camera: 201118d (letter test day; 201118a remains train-only).
+#
+# Does not replace configs/schira_encoding/default.yaml (100718a).
+
+monkey: gandalf
+schira_config: configs/schira/sets.yaml
+schira_set: "201118"
+anchor_session: "201118d"
+
+spatial_size: [100, 100]
+input_size: 224
+
+window_config: configs/windows/evoked_35_46.yaml
+stimuli_config: configs/stimuli/default.yaml
+max_ecc_deg: null
+
+paths:
+  schira_encoding_root: experiments/schira_encoding
+  dl_features_stimuli_root: Data/VSD_Encoder_01/DL_features_stimuli
+  encoding_pairs_root: Data/VSD_Encoder_01/encoding_pairs
+  session_register_root: Data/VSD_Encoder_01/session_register/AS_201118d
+
+ridge:
+  alphas: [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]
+  alpha_per_pixel: true
+  standardize_features: true
+
+loss_roi: noise_ceiling_hull

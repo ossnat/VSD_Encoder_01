@@ -1,0 +1,47 @@
+# Gandalf: register sessions onto 201118d (true-Schira letter day).
+#
+# Batch:
+#   scripts/py scripts/14_register_all_to_anchor.py \
+#     --config experiments/session_register/configs/gandalf_201118d_anchor.yaml \
+#     --schira-encoding-config configs/schira_encoding/anchor_201118d.yaml
+
+monkey: gandalf
+fixed_session: 201118d
+
+start_frame: 35
+end_frame: 40
+spatial_size: [100, 100]
+normalization: none
+n_trials: 40
+seed: 17
+conditions: all
+
+invert_intensity: false
+vessel_method: meijering
+n_vessel_objects: 2
+roi_radius_px: 40
+chamber_rim_px: 12
+vessel_trace_px: 1
+hysteresis_percentiles: [74, 91]
+background_sigma: 8.0
+vessel_percentile: 75
+tophat_radius_px: 6.0
+gaussian_sigma: 1.5
+clip_percentiles: [1, 99]
+hard_clip_percentiles: null
+
+transform_type: rigid
+metric: ncc
+mask_border_px: 6
+max_rotation_deg: 25
+max_translation_px: 30
+
+n_landmarks: 6
+vessel_start_frame: 5
+vessel_end_frame: 25
+landmark_match_max_px: 12
+
+verbose: 0
+save_qc: false
+
+output_dir: Data/VSD_Encoder_01/session_register/AS_201118d

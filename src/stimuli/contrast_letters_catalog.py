@@ -111,7 +111,7 @@ def _parse_filled_circle_radius_deg(text: str) -> float:
 
 
 def _parse_letter_size_deg(text: str) -> float:
-    """Parse letter size; catalog value is the diameter of the letter circle (deg)."""
+    """Parse letter catalog size: side of the 1° bounding square (deg)."""
     match = re.search(r"(\d+(?:\.\d+)?)", str(text))
     if not match:
         raise ValueError(f"Could not parse letter size from {text!r}")

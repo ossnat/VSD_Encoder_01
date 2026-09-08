@@ -1,0 +1,63 @@
+# Gandalf: warp a later session onto 100718a using homologous vessel stations.
+#
+# Pipeline (quiet, no QC, skip if transform.yaml exists):
+#   from src.session_register import load_config, run_registration
+#   cfg = load_config("experiments/session_register/configs/gandalf_100718a_anchor.yaml",
+#                     moving_session="240718a")
+#   out = run_registration(cfg)
+#
+# CLI (writes QC figures by default):
+#   scripts/py experiments/session_register/run_register.py \
+#     --config experiments/session_register/configs/gandalf_100718a_anchor.yaml \
+#     --moving-session 240718a
+#
+# Frozen stations + transforms (Data tree):
+#   Data/VSD_Encoder_01/session_register/AS_100718a/
+#     gandalf__100718a/anchor_landmarks.yaml
+#     gandalf__100718a__{moving}/transform.yaml
+#
+# Batch all encoding-pair sessions:
+#   scripts/py scripts/14_register_all_to_anchor.py
+
+monkey: gandalf
+fixed_session: 100718a
+
+start_frame: 35
+end_frame: 40
+spatial_size: [100, 100]
+normalization: none
+n_trials: 40
+seed: 17
+conditions: all
+
+# Homologous stations on two dark vessel rivers (baseline frames).
+invert_intensity: false
+vessel_method: meijering
+n_vessel_objects: 2
+roi_radius_px: 40
+chamber_rim_px: 12
+vessel_trace_px: 1
+hysteresis_percentiles: [74, 91]
+background_sigma: 8.0
+vessel_percentile: 75
+tophat_radius_px: 6.0
+gaussian_sigma: 1.5
+clip_percentiles: [1, 99]
+hard_clip_percentiles: null
+
+transform_type: rigid
+metric: ncc
+mask_border_px: 6
+max_rotation_deg: 25
+max_translation_px: 30
+
+n_landmarks: 6
+vessel_start_frame: 5
+vessel_end_frame: 25
+landmark_match_max_px: 12
+
+# Library defaults: quiet, no QC PNGs. The CLI turns QC on unless --no-qc.
+verbose: 0
+save_qc: false
+
+output_dir: Data/VSD_Encoder_01/session_register/AS_100718a

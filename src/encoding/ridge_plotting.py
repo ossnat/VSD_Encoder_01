@@ -193,8 +193,13 @@ def plot_reconstruction_pair(
     if im is not None:
         fig.colorbar(im, ax=axes, fraction=0.025, pad=0.03, label="VSD signal")
     fig.suptitle(
-        f"{meta['date']} | {meta['condition']} | {meta.get('shape_type', '')}\n"
-        f"id={meta['trial_global_id']} | {meta['split']} | {meta['trial_dataset']}",
+        f"{meta['date']} | {meta['condition']}"
+        + (
+            f" | {meta['stimulus_label']}"
+            if meta.get("stimulus_label")
+            else (f" | {meta.get('shape_type', '')}" if meta.get("shape_type") else "")
+        )
+        + f"\nid={meta['trial_global_id']} | {meta['split']} | {meta['trial_dataset']}",
         fontsize=10,
     )
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
@@ -230,7 +235,16 @@ def plot_reconstruction_grid(
             if row_idx == 0:
                 ax.set_title(col_titles[col_idx], fontsize=10)
             ax.set_ylabel(
-                f"{meta['date']}\n{meta['condition']}",
+                f"{meta['date']}\n{meta['condition']}"
+                + (
+                    f"\n{meta['stimulus_label']}"
+                    if meta.get("stimulus_label")
+                    else (
+                        f"\n{meta['shape_type']}"
+                        if meta.get("shape_type")
+                        else ""
+                    )
+                ),
                 fontsize=9,
             )
             ax.set_xlabel("x")

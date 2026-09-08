@@ -120,7 +120,7 @@ def test_parse_contrast_and_letters(tmp_path: Path):
     assert {s.letter for s in letters_specs} == set("GANDFL")
 
     image = render_stimulus(contrast[0], RenderConfig())
-    assert image.shape == (224, 224, 3)
+    assert image.shape == (210, 210, 3)
     assert image.dtype == np.uint8
     # Canonical background gray 128 (session blank 186 used only for polarity).
     assert image[0, 0, 0] == 128

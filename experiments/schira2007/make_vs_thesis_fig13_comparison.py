@@ -64,7 +64,7 @@ def _load_yaml(path: Path) -> dict:
         return yaml.safe_load(f) or {}
 
 
-def _render_config(stimuli_cfg: dict, *, canvas_size: int = 672) -> RenderConfig:
+def _render_config(stimuli_cfg: dict, *, canvas_size: int = 630) -> RenderConfig:
     base_canvas = int(stimuli_cfg.get("canvas_size", 224))
     quadrant_extent_deg = float(stimuli_cfg.get("quadrant_extent_deg", 6.0))
     base_ppd = stimuli_cfg.get("pixels_per_deg")
@@ -180,7 +180,7 @@ def main(argv: list[str] | None = None) -> int:
     cfg = _load_yaml(DEFAULT_CONFIG)
     cfg.update(_load_yaml(DEFAULT_WINDOW))
     stimuli_cfg = _load_yaml(DEFAULT_STIMULI)
-    render_cfg = _render_config(stimuli_cfg, canvas_size=672)
+    render_cfg = _render_config(stimuli_cfg, canvas_size=630)
 
     encoder_root = resolve_data_path(cfg["paths"]["encoder_data_root"], repo)
     catalog = load_full_encoder_catalog(

@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Step 1: Schira-only forward map of stimulus **ink** into cortical ``(u, v)``.
+"""Step 1: Schira-only maps in model cortical ``(u, v)`` (no camera affine).
 
-Only black (or non-gray) stimulus pixels are mapped — the gray background is
-not transformed. Camera affine / VSD overlays are step 2.
+Each stimulus PNG has three panels:
+  1. Visual-field render
+  2. Forward ink scatter (stimulus pixels → Schira ``w``)
+  3. Inverse warp on a ``(u, v)`` grid (paper / thesis style cortical image)
+
+Camera affine / VSD overlays are step 2 (``run_phase_0_register.py`` / ``run_phase_0.py``).
 
 Usage:
   scripts/py experiments/schira2007/run_schira_only.py --set 201118
   scripts/py experiments/schira2007/run_schira_only.py --set 201118 \\
-      --stimuli letter_A_white_1 letter_D_white_1 --overwrite
+      --stimuli letter_D_white_1 letter_F_white_1 --overwrite
 """
 
 from __future__ import annotations
@@ -21,9 +25,13 @@ import yaml
 
 from src.paths import project_root, resolve_data_path
 from src.retinotopy.params import load_schira_set
-from src.retinotopy.plotting import plot_schira_only, plot_schira_only_montage
+from src.retinotopy.plotting import (
+    plot_schira_cortex_comparison,
+    plot_schira_only_montage,
+)
 from src.retinotopy.schira import SchiraParams
-from src.retinotopy.warp import forward_ink_cloud_w
+from src.retinotopy.visual_field import upsample_render_canvas
+from src.retinotopy.warp import forward_ink_cloud_w, sample_stimulus_onto_cortical_w
 from src.stimuli.catalog import (
     load_full_encoder_catalog,
     stimulus_spec_from_mapping,
@@ -45,7 +53,7 @@ def _load_yaml(path: Path) -> dict:
 
 
 def _render_config(stimuli_cfg: dict, *, canvas_size: int | None = None) -> RenderConfig:
-    base_canvas = int(stimuli_cfg.get("canvas_size", 224))
+    base_canvas = int(stimuli_cfg.get("canvas_size", 210))
     canvas = int(canvas_size) if canvas_size is not None else base_canvas
     quadrant_extent_deg = float(stimuli_cfg.get("quadrant_extent_deg", 6.0))
     # Keep degrees/pixel consistent with the base catalog canvas.
@@ -68,6 +76,7 @@ def _render_config(stimuli_cfg: dict, *, canvas_size: int | None = None) -> Rend
         ),
         assume_size_is_diameter=bool(stimuli_cfg.get("assume_size_is_diameter", True)),
         draw_fixation=bool(stimuli_cfg.get("draw_fixation", False)),
+        letter_box_deg=float(stimuli_cfg.get("letter_box_deg", 1.0)),
     )
 
 
@@ -97,18 +106,25 @@ def run_schira_only(
     config_path: Path = DEFAULT_CONFIG,
     stimuli_yaml: Path = DEFAULT_STIMULI,
     output_dir: Path | None = None,
-    canvas_size: int = 672,
+    canvas_size: int | None = None,
     overwrite: bool = False,
     skip_existing: bool = True,
     sech_amp: float | None = None,
     stimulus_ids: list[str] | None = None,
+    inverse_grid_size: int = 200,
 ) -> dict:
-    """Forward-map stimulus ink pixels through Schira; plot on Cartesian ``(u,v)``."""
+    """Schira-only cortex views: VF render, forward scatter, inverse warp."""
     repo = repo or project_root()
     cfg = _load_yaml(config_path)
     stimuli_cfg = _load_yaml(stimuli_yaml)
-    # Higher canvas → more ink samples along letter strokes (more detail).
-    render_cfg = _render_config(stimuli_cfg, canvas_size=canvas_size)
+    # 3× YAML canvas (210→630) so 1° = 105 px = 35×3. Degrees unchanged.
+    base_canvas = int(stimuli_cfg.get("canvas_size", 210))
+    canvas = (
+        int(canvas_size)
+        if canvas_size is not None
+        else upsample_render_canvas(base_canvas)
+    )
+    render_cfg = _render_config(stimuli_cfg, canvas_size=canvas)
     set_id, params, _affine, session_raw = load_schira_set(
         schira_config, set_name=set_name
     )
@@ -176,7 +192,7 @@ def run_schira_only(
         f"Schira ink-only (no affine/VSD): set={set_id} a={params.a} "
         f"alpha={params.alpha} k={params.k} shear={params.shear} "
         f"sech_amp={params.sech_amp} sech_ecc_k={params.sech_ecc_k} "
-        f"canvas={render_cfg.canvas_size}"
+        f"canvas={render_cfg.canvas_size} pixels_per_deg={render_cfg.pixels_per_deg:g}"
     )
 
     param_note = (
@@ -212,10 +228,21 @@ def run_schira_only(
         if fu.size == 0:
             raise RuntimeError(f"No ink pixels found for {stim_id!r}")
 
-        title = f"{stim_id} · Schira (ink only) → Cartesian (u, v)"
-        plot_schira_only(
+        warped_rgb, _valid, u_range, v_range = sample_stimulus_onto_cortical_w(
+            stimulus_rgb,
+            params=params,
+            render_cfg=render_cfg,
+            grid_size=int(inverse_grid_size),
+        )
+
+        title = f"{stim_id} · Schira cortex views (no camera affine)"
+        plot_schira_cortex_comparison(
+            stimulus_rgb,
             fu,
             fv,
+            warped_rgb,
+            u_range,
+            v_range,
             output_path=fig_path,
             title=title,
             param_note=param_note,
@@ -259,6 +286,9 @@ def run_schira_only(
         "date_prefix": date_prefix,
         "csv_date": session_raw.get("csv_date"),
         "canvas_size": int(render_cfg.canvas_size),
+        "pixels_per_deg": float(render_cfg.pixels_per_deg),
+        "yaml_base_canvas": int(stimuli_cfg.get("canvas_size", 210)),
+        "yaml_pixels_per_deg": float(stimuli_cfg.get("pixels_per_deg", 35.0)),
         "output_dir": str(out_dir.relative_to(repo)),
         "schira": {
             "a": params.a,
@@ -270,8 +300,8 @@ def run_schira_only(
         },
         "affine": None,
         "note": (
-            "Forward-map of stimulus ink pixels only (no gray background). "
-            "Axes are Cartesian model cortex w = u+iv."
+            "Per-stimulus PNG: VF render | forward ink scatter | inverse warp on "
+            "(u,v) grid (Ayzenshtat / thesis cortical map style). No camera affine."
         ),
         "stimuli": index_rows,
         "montage": (
@@ -299,8 +329,8 @@ def main() -> None:
     p.add_argument(
         "--canvas-size",
         type=int,
-        default=672,
-        help="Render resolution for denser ink sampling (default 672)",
+        default=None,
+        help="Render resolution (default 3× YAML canvas: 210→630, 1°=105 px)",
     )
     p.add_argument(
         "--stimuli",
@@ -313,6 +343,12 @@ def main() -> None:
         type=float,
         default=None,
         help="Override YAML sech_amp for this run only",
+    )
+    p.add_argument(
+        "--inverse-grid-size",
+        type=int,
+        default=200,
+        help="Resolution of inverse-warp (u,v) panel (default 200)",
     )
     p.add_argument("--overwrite", action="store_true")
     p.add_argument(
@@ -332,6 +368,7 @@ def main() -> None:
         skip_existing=not bool(args.overwrite or args.no_skip_existing),
         sech_amp=args.sech_amp,
         stimulus_ids=args.stimuli,
+        inverse_grid_size=args.inverse_grid_size,
     )
 
 

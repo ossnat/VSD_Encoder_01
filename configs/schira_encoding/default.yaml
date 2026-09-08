@@ -1,0 +1,47 @@
+# Schira-geometry encoding (local ridge on warped CNN features).
+#
+# Anchor-centric: one LUT on the anchor camera; other sessions' VSD maps are
+# registered onto that grid before fitting. Flatten ridge remains the baseline.
+#
+# Targets use raw mean maps (normalization: none), not baseline z-score.
+# Session→anchor registration stays on its own vessel window (also raw).
+
+monkey: gandalf
+schira_config: configs/schira/sets.yaml
+schira_set: "100718"
+anchor_session: "100718a"
+
+spatial_size: [100, 100]
+input_size: 224
+
+# Preferred evoked window for train / eval / LOO (raw [35, 46)).
+window_config: configs/windows/evoked_35_46.yaml
+
+# Stimulus geometry (must match configs/stimuli/default.yaml).
+stimuli_config: configs/stimuli/default.yaml
+max_ecc_deg: null
+
+paths:
+  # Models, LUT, warped features, plots — keep under experiments (not Data/).
+  schira_encoding_root: experiments/schira_encoding
+  dl_features_stimuli_root: Data/VSD_Encoder_01/DL_features_stimuli
+  encoding_pairs_root: Data/VSD_Encoder_01/encoding_pairs
+  # Per-anchor registrations stay in Data.
+  session_register_root: Data/VSD_Encoder_01/session_register/AS_100718a
+
+# Local ridge defaults (per-pixel weights on C channels only).
+ridge:
+  alphas: [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]
+  alpha_per_pixel: true
+  standardize_features: true
+
+# Global channel ridge: shared w∈R^C + scalar b (scripts/20_*).
+# standardize_features = per-channel mean/std over train (trial × masked pixel).
+global_channel_ridge:
+  alphas: [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0]
+  standardize_features: true
+
+# Fit + masked metrics: same named ROI as flatten LOO (not the old circle r=50).
+# Intersected with LUT.valid at train time.
+# Alias: none | disk | box_union | noise_ceiling_hull | path/to/mask.npy
+loss_roi: noise_ceiling_hull

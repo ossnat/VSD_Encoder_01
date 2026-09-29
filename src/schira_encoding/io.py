@@ -9,8 +9,10 @@ import pandas as pd
 import xarray as xr
 
 from src.paths import project_root, resolve_data_path
+from src.schira_encoding.lut import SchiraLUT
 from src.schira_encoding.schema import warped_feature_map_path
 from src.schira_encoding.targets import is_anchor_session, warp_target_to_anchor
+from src.schira_encoding.warp_features import warp_feature_map
 from src.session_register.transform import SessionTransform
 
 
@@ -84,29 +86,24 @@ def build_schira_xy(
     anchor_session: str,
     spatial_size: tuple[int, int],
     register_root: Path | None,
+    lut: SchiraLUT | None = None,
+    features_root: Path | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Stack warped features ``(n,C,H,W)`` and anchor-aligned targets ``(n,H,W)``."""
+    """Stack warped features ``(n,C,H,W)`` and anchor-aligned targets ``(n,H,W)``.
+
+    ``lut=None`` reads the shared ``features_warped`` cache (one geometry).
+    A fold-specific :class:`~src.schira_encoding.lut.SchiraLUT` warps the raw
+    CNN maps in memory instead, so each leave-one-out fold can use its own fit.
+    """
+    if lut is not None and features_root is None:
+        raise ValueError("features_root is required when lut is set")
     xs: list[np.ndarray] = []
     ys: list[np.ndarray] = []
     cache: dict[str, SessionTransform | None] = {}
+    warped_cache: dict[tuple[str, str], np.ndarray] = {}
     for row in pairs.itertuples(index=False):
         session = str(row.date)
         condition = str(row.condition)
-        feat_path = warped_feature_map_path(
-            out_root,
-            monkey,
-            model_slug=model_slug,
-            feature_layer=feature_layer,
-            schira_set=schira_set,
-            anchor_session=anchor_session,
-            h5_session=session,
-            condition=condition,
-        )
-        if not feat_path.exists():
-            raise FileNotFoundError(
-                f"Missing warped features {feat_path}. "
-                "Run scripts/11_warp_features_to_vsd.py first."
-            )
         if session not in cache:
             cache[session] = load_session_transform(
                 session=session,
@@ -114,7 +111,41 @@ def build_schira_xy(
                 monkey=monkey,
                 register_root=register_root,
             )
-        x = np.load(feat_path)
+        if lut is None:
+            feat_path = warped_feature_map_path(
+                out_root,
+                monkey,
+                model_slug=model_slug,
+                feature_layer=feature_layer,
+                schira_set=schira_set,
+                anchor_session=anchor_session,
+                h5_session=session,
+                condition=condition,
+            )
+            if not feat_path.exists():
+                raise FileNotFoundError(
+                    f"Missing warped features {feat_path}. "
+                    "Run scripts/11_warp_features_to_vsd.py first."
+                )
+            x = np.load(feat_path)
+        else:
+            key = (session, condition)
+            x = warped_cache.get(key)
+            if x is None:
+                from src.DL_features.schema import stimulus_map_path
+
+                src = stimulus_map_path(
+                    features_root,
+                    monkey,
+                    model_slug,
+                    feature_layer,
+                    session,
+                    condition,
+                )
+                if not src.exists():
+                    raise FileNotFoundError(f"Missing feature map: {src}")
+                x = warp_feature_map(np.load(src), lut)
+                warped_cache[key] = x
         y = load_target_map(resolve_data_path(row.nc_path, repo), spatial_size)
         y = warp_target_to_anchor(y, cache[session])
         xs.append(x)

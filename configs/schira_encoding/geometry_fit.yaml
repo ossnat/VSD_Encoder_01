@@ -1,0 +1,32 @@
+# Which group to move. Directory leaf is schira_opt_{optimize}.
+#   none    — YAML start, no update
+#   schira  — a, alpha, k
+#   camera  — origin_xy, rotation_deg, pixels_per_unit
+#   all     — both groups
+# CLI --optimize overrides this. Flips and sech_* stay fixed.
+# Relative boxes are around the YAML start.
+
+optimize: all
+max_origin_px: 20.0
+max_rotation_deg: 20.0
+max_scale_frac: 0.20
+max_a_frac: 0.30
+max_alpha_frac: 0.30
+max_k_frac: 0.30
+blur_sigma_px: 2.0
+n_steps: 80
+lr: 0.05
+penalty_weight: 0.01
+patience: 15
+min_delta: 1.0e-4
+# Fit target: blurred stimulus vs mean VSD Pearson (not centroid/moments).
+loss: pearson
+centroid_weight: 1.0
+moment_weight: 1.0
+# Geometry-fit set: circles / triangles / bars; skip points and letters.
+# One mean map per imaging day (registered to the anchor), not one grand mean.
+exclude_points: true
+exclude_letters: true
+exclude_bars: false
+anchor_session_only: false
+per_session_examples: true

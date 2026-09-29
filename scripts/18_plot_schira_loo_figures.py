@@ -29,14 +29,16 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from src.encoding.ridge_plotting import plot_reconstruction_grid
 from src.evaluation.loss_roi import NOISE_CEILING_HULL_MASK_RELPATH
 from src.evaluation.mask import apply_mask_nan, masked_map_summary
 from src.evaluation.pixel_correlation import (
     pixel_correlation_across_trials,
     pixel_r2_across_trials,
 )
-from src.evaluation.plotting import plot_pixel_correlation_heatmap
+from src.evaluation.plotting import (
+    plot_loo_all_shapes_orig_recon,
+    plot_pixel_correlation_heatmap,
+)
 from src.paths import project_root, resolve_data_path
 from src.plotting_colormaps import VSD_CMAP, register_mapgeog
 from src.schira_encoding.io import build_schira_xy, resolve_output_root
@@ -87,55 +89,6 @@ def _hull_mask(repo: Path, spatial: tuple[int, int]) -> np.ndarray:
     if mask.shape != spatial:
         raise ValueError(f"Hull {mask.shape} != spatial {spatial}")
     return mask
-
-
-def _plot_all_shapes_orig_recon(
-    fold_dirs: list[Path],
-    *,
-    valid: np.ndarray,
-    out_path: Path,
-    title: str,
-) -> None:
-    samples = []
-    for fold_dir in fold_dirs:
-        metrics = json.loads((fold_dir / "metrics.json").read_text())
-        sid = str(metrics.get("heldout_stimulus_id") or fold_dir.name)
-        date = metrics.get("heldout_date")
-        cond = metrics.get("heldout_condition")
-        if (not date or not cond) and (fold_dir / "fold_pairs.parquet").is_file():
-            pairs = pd.read_parquet(fold_dir / "fold_pairs.parquet")
-            test = pairs[pairs["loo_split"] == "test"] if "loo_split" in pairs.columns else pairs
-            if not test.empty:
-                date = date or str(test["date"].iloc[0])
-                if "condition" in test.columns:
-                    cond = cond or str(test["condition"].iloc[0])
-        if date:
-            label = f"{sid}\n{date}" + (f"/{cond}" if cond else "")
-        else:
-            label = sid
-        orig = np.load(fold_dir / "fold_mean_orig.npy").astype(np.float32)
-        recon = np.load(fold_dir / "fold_mean_recon.npy").astype(np.float32)
-        samples.append(
-            (
-                {
-                    "date": str(date or "loo"),
-                    "condition": str(cond or sid),
-                    "stimulus_label": label,
-                    "shape_type": "",
-                    "trial_global_id": 0,
-                    "split": "loo_test_mean",
-                    "trial_dataset": "",
-                },
-                apply_mask_nan(orig, valid),
-                apply_mask_nan(recon, valid),
-            )
-        )
-    # Shared 1–99% clim across all orig|recon panels (easy fold comparison).
-    plot_reconstruction_grid(
-        samples,
-        out_path,
-        title=title,
-    )
 
 
 def _pooled_encoding_maps(
@@ -367,7 +320,7 @@ def main() -> None:
         f"{model_slug}/{feature_layer} · {window_id}"
     )
     grid_path = overview / "all_shapes_orig_recon.png"
-    _plot_all_shapes_orig_recon(
+    plot_loo_all_shapes_orig_recon(
         fold_dirs, valid=plot_mask, out_path=grid_path, title=title
     )
     print(f"Wrote {grid_path}")

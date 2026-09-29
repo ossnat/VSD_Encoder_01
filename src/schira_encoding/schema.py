@@ -159,6 +159,40 @@ def local_ridge_loo_dir(
     ) / loo_protocol_leaf(protocol, loss_roi, date_prefix, run_tag)
 
 
+def global_channel_ridge_schira_opt_dir(
+    root: Path,
+    monkey: str,
+    window_id: str,
+    model_slug: str,
+    feature_layer: str,
+    *,
+    schira_set: str,
+    anchor_session: str,
+    run_name: str = "schira_opt",
+    optimize: str | None = None,
+) -> Path:
+    """Per-fold Schira fit plus global-channel ridge, beside the fixed-geometry LOO."""
+    from src.schira_encoding.geometry_fit import schira_opt_run_leaf
+
+    if optimize is None:
+        leaf = str(run_name).strip() or "schira_opt"
+    else:
+        leaf = schira_opt_run_leaf(optimize, run_name)
+    return (
+        _loo_set_dir(
+            root,
+            monkey,
+            window_id,
+            model_slug,
+            feature_layer,
+            schira_set=schira_set,
+            anchor_session=anchor_session,
+        )
+        / "global_channel_ridge"
+        / leaf
+    )
+
+
 def global_channel_ridge_loo_dir(
     root: Path,
     monkey: str,

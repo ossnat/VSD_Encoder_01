@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import matplotlib
@@ -98,6 +99,59 @@ def plot_pixel_correlation_heatmap(
     fig.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return output_path
+
+
+def plot_loo_all_shapes_orig_recon(
+    fold_dirs: list[Path],
+    *,
+    valid: np.ndarray,
+    out_path: Path,
+    title: str,
+) -> Path:
+    """One orig|recon row per LOO fold, from cached fold-mean maps."""
+    from src.encoding.ridge_plotting import plot_reconstruction_grid
+
+    samples = []
+    for fold_dir in fold_dirs:
+        metrics_path = fold_dir / "metrics.json"
+        metrics = json.loads(metrics_path.read_text()) if metrics_path.is_file() else {}
+        sid = str(metrics.get("heldout_stimulus_id") or fold_dir.name)
+        date = metrics.get("heldout_date")
+        cond = metrics.get("heldout_condition")
+        pairs_path = fold_dir / "fold_pairs.parquet"
+        if (not date or not cond) and pairs_path.is_file():
+            pairs = pd.read_parquet(pairs_path)
+            test = (
+                pairs[pairs["loo_split"] == "test"]
+                if "loo_split" in pairs.columns
+                else pairs
+            )
+            if not test.empty:
+                date = date or str(test["date"].iloc[0])
+                if "condition" in test.columns:
+                    cond = cond or str(test["condition"].iloc[0])
+        if date:
+            label = f"{sid}\n{date}" + (f"/{cond}" if cond else "")
+        else:
+            label = sid
+        orig = np.load(fold_dir / "fold_mean_orig.npy").astype(np.float32)
+        recon = np.load(fold_dir / "fold_mean_recon.npy").astype(np.float32)
+        samples.append(
+            (
+                {
+                    "date": str(date or "loo"),
+                    "condition": str(cond or sid),
+                    "stimulus_label": label,
+                    "shape_type": "",
+                    "trial_global_id": 0,
+                    "split": "loo_test_mean",
+                    "trial_dataset": "",
+                },
+                apply_mask_nan(orig, valid),
+                apply_mask_nan(recon, valid),
+            )
+        )
+    return plot_reconstruction_grid(samples, out_path, title=title)
 
 
 def plot_backbone_correlation_comparison(

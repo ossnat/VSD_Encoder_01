@@ -1,0 +1,18 @@
+# Paths into the legacy Joanna/Amit Gandalf tree (local machine).
+# Override with env SHIRA_REVISED_LEGACY_ROOT if needed.
+
+legacy_root: "/Users/ossnat/GondaResearch/VSD_FM/legacy_code/Retinotopic model Joanna/Gandalf"
+
+artifacts:
+  winner_amit: "Code/Amit old code/winner201118.mat"
+  parameters_amit: "Code/Amit old code/parameters.mat"
+  retino_mat_crop: "Results Data/20_03_2022 results/retino_mat_20_03_22.mat"
+  opt_points_201118: "VSDI points/201118/opt_points_8_5_22.mat"
+  winners_201118: "Opt_results/201118/25-07-2022-17/min_50_rmsd_winners.mat"
+  pixels_201118: "gandalf_201118_pixels4Retino.mat"
+  pixels_100718: "gandalf_100718_pixels4Retino.mat"
+  chamber_201118: "images/201118/BV_resized.png"
+  chamber_100718: "images/100718/BV_resized.png"
+  letters_201118_a: "images/201118/Session a"
+  letters_201118_d: "images/201118/Session d"
+  bars_100718_b: "images/100718/Session b"

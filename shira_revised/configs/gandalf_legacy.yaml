@@ -1,0 +1,62 @@
+# Golden Schira + registration params extracted from legacy mats.
+# Used by shira_revised scripts/tests — not wired into main encoding.
+
+ppd: 35
+stim_hw: [301, 512]   # rows, cols — legacy canvas
+chamber_hw: [100, 100]
+model: 2
+b: 201                # monopole branch in trans_cortex
+iso_polar_grad: 0.1821
+ecc_width: 0.7609
+left_hemisphere: true
+low_hemisphere: true
+alpha_mode: divide    # live lab convention (T = theta / alpha)
+
+# Amit reference (winner201118.mat / parameters.mat)
+amit_201118:
+  a: 0.39
+  alpha: 1.5
+  k: 1.0
+  # points rows: [brain_row, brain_col, vf_x_deg, vf_y_deg]
+  anchors:
+    - {brain: [25, 36], vf_deg: [0.5, -0.4]}
+    - {brain: [48, 55], vf_deg: [1.5, -0.4]}
+
+# Joanna Opt_results/201118/25-07-2022-17 row 0
+# winner cols: [a1_row, a1_col, a2_row, a2_col, a, alpha, k, mean_rmsd, ...]
+# VF pixel anchors (49,18) and (15,18) are rows of opt_points_8_5_22
+# matching brain (31,78) and (36,25).
+joanna_201118:
+  a: 0.72
+  alpha: 1.5
+  k: 1.0
+  mean_rmsd_px: 1.52040292
+  vf_pix_anchors:
+    - [49, 18]   # row, col in stimulus / opt_points convention
+    - [15, 18]
+  # Corresponding brain pixels from opt_points_8_5_22 rows with those VF pix:
+  brain_anchors:
+    - [31, 78]   # matches VF (49,18)
+    - [36, 25]   # matches VF (15,18)
+
+letter_centers_deg:
+  A: [1.0, -0.9]
+  D: [1.4, -0.7]
+
+bar_100718:
+  center_deg: [0.6, -0.75]
+  length_deg: 1.0
+
+# Joanna Opt_results/100718/25-09-2023-23-02 row 0 (a=0.74, α=1, RMSD≈2.56)
+# Brain cols from opt_points_25_09_23_22.mat
+joanna_100718:
+  a: 0.74
+  alpha: 1.0
+  k: 1.0
+  mean_rmsd_px: 2.56066017
+  vf_pix_anchors:
+    - [9, 21]
+    - [37, 21]
+  brain_anchors:
+    - [46, 24]   # matches VF (9,21)
+    - [36, 58]   # matches VF (37,21)

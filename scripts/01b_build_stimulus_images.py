@@ -68,7 +68,7 @@ def _render_config(cfg: dict) -> RenderConfig:
 
 def _coerce_spec(row: dict) -> StimulusSpec:
     data = dict(row)
-    for key in ("rgb", "letter", "source_path", "background_gray", "cortex_file", "size_deg"):
+    for key in ("rgb", "letter", "source_path", "background_gray", "cortex_file", "size_deg", "size_note"):
         val = data.get(key, None)
         if val is None:
             data[key] = None
@@ -145,6 +145,7 @@ def build_stimulus_images(
             "letter": spec.letter,
             "source_path": spec.source_path,
             "background_gray": spec.background_gray,
+            "size_note": spec.size_note,
             "image_path": _portable_path(out_path, repo),
             "catalog_path": (
                 _portable_path(contrast_path, repo)

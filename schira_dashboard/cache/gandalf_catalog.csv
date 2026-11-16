@@ -1,0 +1,80 @@
+session,condition,shape_type,color,size_deg,pos_x_deg,pos_y_deg,stimulus_text,image_path,variant,drawn_diameter_deg
+100718a,condAN1,point,black,0.1,0.6,-0.75,cond1: black point 0.1 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/100718a/condAN1.png,as rendered,0.1
+100718a,condAN2,point,black,0.05,0.6,-0.75,cond2: black point 0.05 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/100718a/condAN2.png,as rendered,0.05
+100718a,condAN3,triangle_contour,black,0.4,0.6,-0.75,cond3: black triangle contour 0.4 radius,Data/VSD_Encoder_01/stimuli/gandalf/images/100718a/condAN3.png,as rendered,0.4
+100718a,condAN4,circle_contour,black,0.3,0.6,-0.75,cond4: black circle contour 0.3 radius,Data/VSD_Encoder_01/stimuli/gandalf/images/100718a/condAN4.png,as rendered,0.3
+100718a,condAN5,bar_vertical,black,1.0,0.6,-0.75,"cond5: black bar vertical, 1deg",Data/VSD_Encoder_01/stimuli/gandalf/images/100718a/condAN5.png,as rendered,
+100718a,condAN7,bar_horizontal,black,1.0,0.6,-0.75,cond7: black bar horizontal 1deg,Data/VSD_Encoder_01/stimuli/gandalf/images/100718a/condAN7.png,as rendered,
+100718b,condAN1,point,black,0.1,0.6,-0.75,cond1: black point 0.1 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/100718b/condAN1.png,as rendered,0.1
+100718b,condAN2,point,black,0.05,0.6,-0.75,cond2: black point 0.05 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/100718b/condAN2.png,as rendered,0.05
+100718b,condAN3,triangle_contour,black,0.4,0.6,-0.75,cond3: black triangle contour 0.4 radius,Data/VSD_Encoder_01/stimuli/gandalf/images/100718b/condAN3.png,as rendered,0.4
+100718b,condAN4,circle_contour,black,0.3,0.6,-0.75,cond4: black circle contour 0.3 radius,Data/VSD_Encoder_01/stimuli/gandalf/images/100718b/condAN4.png,as rendered,0.3
+100718b,condAN5,bar_vertical,black,1.0,0.6,-0.75,"cond5: black bar vertical, 1deg",Data/VSD_Encoder_01/stimuli/gandalf/images/100718b/condAN5.png,as rendered,
+100718b,condAN7,bar_horizontal,black,1.0,0.6,-0.75,cond7: black bar horizontal 1deg,Data/VSD_Encoder_01/stimuli/gandalf/images/100718b/condAN7.png,as rendered,
+130618c,condAN1,filled_circle,white,0.3,0.6,-0.75,"cond1: Contrast curve - White filled circle rgb=(249,249,249)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618c/condAN1.png,as rendered,0.3
+130618c,condAN2,filled_circle,white,0.3,0.6,-0.75,"cond2: Contrast curve - White filled circle rgb=(249,249,249)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618c/condAN2.png,as rendered,0.3
+130618c,condAN3,filled_circle,white,0.3,0.6,-0.75,"cond3: Contrast curve - White filled circle rgb=(209,209,209)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618c/condAN3.png,as rendered,0.3
+130618c,condAN4,filled_circle,white,0.3,0.6,-0.75,"cond4: Contrast curve - White filled circle rgb=(198,198,198)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618c/condAN4.png,as rendered,0.3
+130618c,condAN5,filled_circle,white,0.3,0.6,-0.75,"cond5: Contrast curve - White filled circle rgb=(192,192,192)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618c/condAN5.png,as rendered,0.3
+130618c,condAN7,filled_circle,white,0.3,0.6,-0.75,"cond7: Contrast curve - White filled circle rgb=(190,190,190)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618c/condAN7.png,as rendered,0.3
+130618d,condAN1,filled_circle,black,0.3,0.6,-0.75,"cond1: Contrast curve - Black filled circle rgb=(0,0,0)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618d/condAN1.png,as rendered,0.3
+130618d,condAN2,filled_circle,black,0.3,0.6,-0.75,"cond2: Contrast curve - Black filled circle rgb=(0,0,0)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618d/condAN2.png,as rendered,0.3
+130618d,condAN3,filled_circle,black,0.3,0.6,-0.75,"cond3: Contrast curve - Black filled circle rgb=(158,158,158)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618d/condAN3.png,as rendered,0.3
+130618d,condAN4,filled_circle,black,0.3,0.6,-0.75,"cond4: Contrast curve - Black filled circle rgb=(173,173,173)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618d/condAN4.png,as rendered,0.3
+130618d,condAN5,filled_circle,black,0.3,0.6,-0.75,"cond5: Contrast curve - Black filled circle rgb=(179,179,179)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618d/condAN5.png,as rendered,0.3
+130618d,condAN7,filled_circle,black,0.3,0.6,-0.75,"cond7: Contrast curve - Black filled circle rgb=(182,182,182)",Data/VSD_Encoder_01/stimuli/gandalf/images/130618d/condAN7.png,as rendered,0.3
+201118a,condAN1,letter,white,1.0,1.0,-0.9,cond1: letter G,Data/VSD_Encoder_01/stimuli/gandalf/images/201118a/condAN1.png,as rendered,
+201118a,condAN2,letter,white,1.0,1.0,-0.9,cond2: letter A,Data/VSD_Encoder_01/stimuli/gandalf/images/201118a/condAN2.png,as rendered,
+201118a,condAN3,letter,white,1.0,1.0,-0.9,cond3: letter N,Data/VSD_Encoder_01/stimuli/gandalf/images/201118a/condAN3.png,as rendered,
+201118a,condAN4,letter,white,1.0,1.0,-0.9,cond4: letter D,Data/VSD_Encoder_01/stimuli/gandalf/images/201118a/condAN4.png,as rendered,
+201118a,condAN5,letter,white,1.0,1.0,-0.9,cond5: letter F,Data/VSD_Encoder_01/stimuli/gandalf/images/201118a/condAN5.png,as rendered,
+201118a,condAN7,letter,white,1.0,1.0,-0.9,cond7: letter L,Data/VSD_Encoder_01/stimuli/gandalf/images/201118a/condAN7.png,as rendered,
+201118c,condAN1,letter,white,1.0,1.7,-0.8,cond1: letter G,Data/VSD_Encoder_01/stimuli/gandalf/images/201118c/condAN1.png,as rendered,
+201118c,condAN2,letter,white,1.0,1.7,-0.8,cond2: letter A,Data/VSD_Encoder_01/stimuli/gandalf/images/201118c/condAN2.png,as rendered,
+201118c,condAN3,letter,white,1.0,1.7,-0.8,cond3: letter N,Data/VSD_Encoder_01/stimuli/gandalf/images/201118c/condAN3.png,as rendered,
+201118c,condAN4,letter,white,1.0,1.7,-0.8,cond4: letter D,Data/VSD_Encoder_01/stimuli/gandalf/images/201118c/condAN4.png,as rendered,
+201118c,condAN5,letter,white,1.0,1.7,-0.8,cond5: letter F,Data/VSD_Encoder_01/stimuli/gandalf/images/201118c/condAN5.png,as rendered,
+201118c,condAN7,letter,white,1.0,1.7,-0.8,cond7: letter L,Data/VSD_Encoder_01/stimuli/gandalf/images/201118c/condAN7.png,as rendered,
+201118d,condAN1,letter,white,1.0,1.4,-0.8,cond1: letter G,Data/VSD_Encoder_01/stimuli/gandalf/images/201118d/condAN1.png,as rendered,
+201118d,condAN2,letter,white,1.0,1.4,-0.8,cond2: letter A,Data/VSD_Encoder_01/stimuli/gandalf/images/201118d/condAN2.png,as rendered,
+201118d,condAN3,letter,white,1.0,1.4,-0.8,cond3: letter N,Data/VSD_Encoder_01/stimuli/gandalf/images/201118d/condAN3.png,as rendered,
+201118d,condAN4,letter,white,1.0,1.4,-0.8,cond4: letter D,Data/VSD_Encoder_01/stimuli/gandalf/images/201118d/condAN4.png,as rendered,
+201118d,condAN5,letter,white,1.0,1.4,-0.8,cond5: letter F,Data/VSD_Encoder_01/stimuli/gandalf/images/201118d/condAN5.png,as rendered,
+201118d,condAN7,letter,white,1.0,1.4,-0.8,cond7: letter L,Data/VSD_Encoder_01/stimuli/gandalf/images/201118d/condAN7.png,as rendered,
+230518b,condAN1,filled_circle,white,0.8,0.6,-0.75,"cond1: Contrast curve - White filled circle rgb=(249,249,249)",Data/VSD_Encoder_01/stimuli/gandalf/images/230518b/condAN1.png,as rendered,0.8
+230518b,condAN2,filled_circle,white,0.8,0.6,-0.75,"cond2: Contrast curve - White filled circle rgb=(229,229,229)",Data/VSD_Encoder_01/stimuli/gandalf/images/230518b/condAN2.png,as rendered,0.8
+230518b,condAN3,filled_circle,white,0.8,0.6,-0.75,"cond3: Contrast curve - White filled circle rgb=(209,209,209)",Data/VSD_Encoder_01/stimuli/gandalf/images/230518b/condAN3.png,as rendered,0.8
+230518b,condAN4,filled_circle,white,0.8,0.6,-0.75,"cond4: Contrast curve - White filled circle rgb=(198,198,198)",Data/VSD_Encoder_01/stimuli/gandalf/images/230518b/condAN4.png,as rendered,0.8
+230518b,condAN5,filled_circle,white,0.8,0.6,-0.75,"cond5: Contrast curve - White filled circle rgb=(192,192,192)",Data/VSD_Encoder_01/stimuli/gandalf/images/230518b/condAN5.png,as rendered,0.8
+230518b,condAN7,filled_circle,white,0.8,0.6,-0.75,"cond7: Contrast curve - White filled circle rgb=(190,190,190)",Data/VSD_Encoder_01/stimuli/gandalf/images/230518b/condAN7.png,as rendered,0.8
+240718a,condAN1,point,black,0.1,0.6,-0.75,cond1: black point 0.1 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/240718a/condAN1.png,as rendered,0.1
+240718a,condAN2,circle_contour,black,0.95,0.0,0.0,cond2: black circle contour 0.95 radius,Data/VSD_Encoder_01/stimuli/gandalf/images/240718a/condAN2.png,as rendered,0.95
+240718a,condAN3,triangle_contour,black,0.4,0.6,-0.75,cond3: black triangle contour 0.4 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/240718a/condAN3.png,as rendered,0.4
+240718a,condAN4,circle_contour,black,0.3,0.6,-0.75,cond4: black circle contour 0.3 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/240718a/condAN4.png,as rendered,0.3
+240718a,condAN5,bar_vertical,black,1.0,0.6,-0.75,cond5: black bar vertical,Data/VSD_Encoder_01/stimuli/gandalf/images/240718a/condAN5.png,as rendered,
+240718b,condAN1,point,black,0.1,0.6,-0.75,cond1: black point 0.1 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/240718b/condAN1.png,as rendered,0.1
+240718b,condAN2,circle_contour,black,0.95,0.0,0.0,cond2: black circle contour 0.95 radius,Data/VSD_Encoder_01/stimuli/gandalf/images/240718b/condAN2.png,as rendered,0.95
+240718b,condAN3,triangle_contour,black,0.4,0.6,-0.75,cond3: black triangle contour 0.4 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/240718b/condAN3.png,as rendered,0.4
+240718b,condAN4,circle_contour,black,0.3,0.6,-0.75,cond4: black circle contour 0.3 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/240718b/condAN4.png,as rendered,0.3
+240718b,condAN5,bar_vertical,black,1.0,0.6,-0.75,cond5: black bar vertical,Data/VSD_Encoder_01/stimuli/gandalf/images/240718b/condAN5.png,as rendered,
+240718c,condAN1,point,black,0.1,0.6,-0.75,cond1: black point 0.1 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/240718c/condAN1.png,as rendered,0.1
+240718c,condAN2,circle_contour,black,0.95,0.0,0.0,cond2: black circle contour 0.95 radius,Data/VSD_Encoder_01/stimuli/gandalf/images/240718c/condAN2.png,as rendered,0.95
+240718c,condAN3,triangle_contour,black,0.4,0.6,-0.75,cond3: black triangle contour 0.4 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/240718c/condAN3.png,as rendered,0.4
+240718c,condAN4,circle_contour,black,0.3,0.6,-0.75,cond4: black circle contour 0.3 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/240718c/condAN4.png,as rendered,0.3
+240718c,condAN5,bar_vertical,black,1.0,0.6,-0.75,cond5: black bar vertical,Data/VSD_Encoder_01/stimuli/gandalf/images/240718c/condAN5.png,as rendered,
+270618b,condAN1,point,black,0.1,0.6,-0.75,cond1: black point 0.1 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/270618b/condAN1.png,as rendered,0.1
+270618b,condAN2,point,black,0.05,0.6,-0.75,cond2: black point 0.05 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/270618b/condAN2.png,as rendered,0.05
+270618b,condAN3,triangle_contour,black,0.4,0.6,-0.75,cond3: black triangle contour 0.4 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/270618b/condAN3.png,as rendered,0.4
+270618b,condAN4,circle_contour,black,0.3,0.6,-0.75,cond4: black circle contour 0.3 diameter,Data/VSD_Encoder_01/stimuli/gandalf/images/270618b/condAN4.png,as rendered,0.3
+270618b,condAN5,bar_vertical,black,1.0,0.6,-0.75,cond5: black bar vertical,Data/VSD_Encoder_01/stimuli/gandalf/images/270618b/condAN5.png,as rendered,
+270618b,condAN7,bar_horizontal,black,1.0,0.6,-0.75,cond7: black bar horizontal,Data/VSD_Encoder_01/stimuli/gandalf/images/270618b/condAN7.png,as rendered,
+290518a,condAN1,point,white,0.1,0.6,-0.75,cond1: white point 0.1 diameter/radius?,Data/VSD_Encoder_01/stimuli/gandalf/images/290518a/condAN1.png,as rendered,0.1
+290518a,condAN2,filled_circle,white,0.3,0.6,-0.75,cond2: white filled circle 0.3 diameter/radius?,Data/VSD_Encoder_01/stimuli/gandalf/images/290518a/condAN2.png,as rendered,0.3
+290518a,condAN3,circle_contour,white,0.3,0.6,-0.75,cond3: white circle contour 0.3 d/r?,Data/VSD_Encoder_01/stimuli/gandalf/images/290518a/condAN3.png,as rendered,0.3
+290518a,condAN4,point,black,0.1,0.6,-0.75,cond4: black point 0.1 d/r?,Data/VSD_Encoder_01/stimuli/gandalf/images/290518a/condAN4.png,as rendered,0.1
+290518a,condAN5,filled_circle,black,0.3,0.6,-0.75,cond5: black filled circle 0.3 d/r?,Data/VSD_Encoder_01/stimuli/gandalf/images/290518a/condAN5.png,as rendered,0.3
+290518a,condAN7,circle_contour,black,0.3,0.6,-0.75,cond7: black circle contour 0.3 d/r?,Data/VSD_Encoder_01/stimuli/gandalf/images/290518a/condAN7.png,as rendered,0.3
+100718a,condAN3,triangle_contour,black,0.4,0.6,-0.75,cond3: black triangle contour 0.4 radius,schira_dashboard/stimuli/100718a/condAN3__radius.png,radius,0.8
+100718a,condAN4,circle_contour,black,0.3,0.6,-0.75,cond4: black circle contour 0.3 radius,schira_dashboard/stimuli/100718a/condAN4__radius.png,radius,0.6
+100718b,condAN3,triangle_contour,black,0.4,0.6,-0.75,cond3: black triangle contour 0.4 radius,schira_dashboard/stimuli/100718b/condAN3__radius.png,radius,0.8
+100718b,condAN4,circle_contour,black,0.3,0.6,-0.75,cond4: black circle contour 0.3 radius,schira_dashboard/stimuli/100718b/condAN4__radius.png,radius,0.6

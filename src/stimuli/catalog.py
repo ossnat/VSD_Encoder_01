@@ -34,6 +34,8 @@ class StimulusSpec:
     letter: str | None = None
     source_path: str | None = None
     background_gray: int | None = None
+    # How the catalog size was read (e.g. 'radius 0.4 -> diameter 0.8'); size_deg is always a DIAMETER.
+    size_note: str | None = None
 
 
 def monkey_catalog_path(encoder_data_root: Path, monkey: str) -> Path:
@@ -98,6 +100,27 @@ def _parse_session_letters(session_field: str) -> list[str]:
         if letter not in out:
             out.append(letter)
     return out
+
+
+def size_as_diameter(text: str, value: float | None) -> tuple[float | None, str | None]:
+    """Catalog sizes are sometimes a radius, sometimes a diameter. Return (diameter_deg, note).
+
+    * '... radius'                 -> diameter = 2 * value
+    * '... diameter'               -> diameter = value
+    * 'diameter/radius?', 'd/r?'   -> unclear in the catalog; read as a diameter like the majority of the
+                                      shapes catalog (points and circles labelled 'diameter'); note kept.
+    """
+    if value is None:
+        return None, None
+    lower = text.lower()
+    unclear = ("d/r" in lower) or ("diameter/radius" in lower) or ("radius/diameter" in lower)
+    if unclear:
+        return value, f"catalog size unclear ('{value:g} d/r?'); read as diameter (majority convention)"
+    if "radius" in lower:
+        return 2.0 * value, f"catalog radius {value:g} -> diameter {2.0 * value:g}"
+    if "diameter" in lower:
+        return value, f"catalog diameter {value:g}"
+    return value, None
 
 
 def _parse_stimulus_text(text: str, *, bar_length_deg: float) -> tuple[str, str, float | None, bool]:
@@ -215,6 +238,17 @@ def parse_stimulus_rows(
         color, shape_type, size_deg, is_blank = _parse_stimulus_text(
             desc, bar_length_deg=bar_length_deg
         )
+        size_note = None
+        if shape_type in ("point", "filled_circle", "circle_contour", "triangle_contour"):
+            size_deg, size_note = size_as_diameter(desc, size_deg)
+        elif shape_type in ("bar_vertical", "bar_horizontal"):
+            size_note = f"bar length {size_deg:g} deg"
+        # Known catalog typo: 24/7/2018 lists 'Cond 6 Blank' AND 'cond6: black bar horizontal'. The recordings
+        # have condAN7 (horizontal bar) and no condAN6 (blank trials are in a separate file), as in every other
+        # shapes session, so the horizontal bar is condition 7.
+        if current_date == "24/7/2018" and cond_num == 6 and shape_type == "bar_horizontal":
+            cond_num = 7
+            size_note = (size_note or "") + "; catalog says cond6 (typo): recordings have condAN7"
 
         for session_letter in session_letters:
             rows.append(
@@ -233,6 +267,7 @@ def parse_stimulus_rows(
                     pos_y_deg=current_position[1],
                     is_blank=is_blank,
                     cortex_file=current_cortex,
+                    size_note=size_note,
                 )
             )
 

@@ -119,6 +119,10 @@ def _draw_triangle_contour(
     for angle_deg in (0, 120, 240):
         rad = math.radians(angle_deg)
         pts.append((x_px + radius_px * math.cos(rad), y_px - radius_px * math.sin(rad)))
+    # cos(120 deg) and cos(240 deg) differ in the last floating-point digit, which can make PIL draw the vertical
+    # side in two different columns. Both left vertices share x exactly: use one rounded value.
+    x_left = round(x_px - radius_px / 2.0, 6)
+    pts = [(round(pts[0][0], 6), round(pts[0][1], 6)), (x_left, round(pts[1][1], 6)), (x_left, round(pts[2][1], 6))]
     outline = _color_rgb(spec)
     closed = pts + [pts[0]]
     draw.line(closed, fill=outline, width=cfg.contour_width_px)
@@ -127,20 +131,19 @@ def _draw_triangle_contour(
 def _draw_bar(
     draw: ImageDraw.ImageDraw, spec: StimulusSpec, cfg: RenderConfig, *, vertical: bool
 ) -> None:
+    # Exact pixel bar: length = round(length_deg * ppd) px (35 px for 1 deg), width = bar_width_px (1 px),
+    # centred on the catalog position. PIL rectangles include both end pixels, hence the "- 1".
     length_deg = spec.size_deg if spec.size_deg is not None else cfg.bar_length_deg
-    length_px = _deg_to_px(length_deg, cfg)
-    width_px = float(max(cfg.contour_width_px, cfg.bar_width_px))
+    n_len = int(round(_deg_to_px(length_deg, cfg)))
+    n_wid = int(max(cfg.contour_width_px, cfg.bar_width_px))
     x_px, y_px = _deg_point_to_px(spec.pos_x_deg, spec.pos_y_deg, cfg)
+    start = lambda centre, n: int(math.floor(centre - n / 2.0 + 0.5))
     if vertical:
-        left = x_px - width_px / 2.0
-        right = x_px + width_px / 2.0
-        top = y_px - length_px / 2.0
-        bottom = y_px + length_px / 2.0
+        left, top = start(x_px, n_wid), start(y_px, n_len)
+        right, bottom = left + n_wid - 1, top + n_len - 1
     else:
-        left = x_px - length_px / 2.0
-        right = x_px + length_px / 2.0
-        top = y_px - width_px / 2.0
-        bottom = y_px + width_px / 2.0
+        left, top = start(x_px, n_len), start(y_px, n_wid)
+        right, bottom = left + n_len - 1, top + n_wid - 1
     draw.rectangle((left, top, right, bottom), fill=_color_rgb(spec))
 
 
@@ -207,13 +210,11 @@ def _render_letter_on_quadrant(spec: StimulusSpec, cfg: RenderConfig) -> np.ndar
 def render_stimulus(spec: StimulusSpec, cfg: RenderConfig | None = None) -> np.ndarray:
     """
     Render one stimulus as RGB uint8 array with shape (H, W, 3).
+    The background is the stimulus' own ``background_gray`` when the catalog gives one, else the config grey.
     """
     cfg = cfg or RenderConfig()
-    img = Image.new(
-        "RGB",
-        (cfg.canvas_size, cfg.canvas_size),
-        color=(cfg.background_gray, cfg.background_gray, cfg.background_gray),
-    )
+    bg = int(spec.background_gray) if getattr(spec, "background_gray", None) is not None else cfg.background_gray
+    img = Image.new("RGB", (cfg.canvas_size, cfg.canvas_size), color=(bg, bg, bg))
     draw = ImageDraw.Draw(img)
 
     if not spec.is_blank:

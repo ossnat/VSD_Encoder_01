@@ -266,10 +266,11 @@ def parse_contrast_letters_rows(
                 if kind in {"blank", "error", "skip"}:
                     continue
                 assert gray is not None
-                gray = _enforce_contrast_polarity(
-                    gray, polarity=polarity, background=polarity_bg, anchor=anchor
-                )
+                # Use the catalog RGB as written. (Earlier versions forced the session polarity here, which
+                # swapped 13/06/2018 cond2: the catalog lists BOTH 100% polarities, cond1 = 249 and cond2 = 0 in
+                # session c, and the reverse in d.)
                 rgb = (gray, gray, gray)
+                cond_color = "white" if gray > polarity_bg else "black"
                 stim_text = (
                     f"cond{cond_num}: {paradigm} filled circle "
                     f"rgb=({gray},{gray},{gray})"
@@ -283,7 +284,7 @@ def parse_contrast_letters_rows(
                         condition=condition_label(cond_num),
                         condition_num=cond_num,
                         stimulus_text=stim_text,
-                        color=polarity,
+                        color=cond_color,
                         shape_type="filled_circle",
                         size_deg=diameter_deg,
                         pos_x_deg=pos_x,
@@ -293,7 +294,9 @@ def parse_contrast_letters_rows(
                         rgb=rgb,
                         letter=None,
                         source_path=None,
-                        background_gray=128,
+                        # The session's Blank RGB (catalog 'Blank (186)') is the screen background.
+                        background_gray=int(polarity_bg),
+                        size_note=f"catalog radius {diameter_deg / 2:g} -> diameter {diameter_deg:g}",
                     )
                 )
             continue

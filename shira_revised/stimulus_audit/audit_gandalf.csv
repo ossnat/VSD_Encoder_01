@@ -1,0 +1,91 @@
+session,condition,shape,text,color,size_deg,x_deg,y_deg,n_ink_px,ink_values,n_components,centre_err_px,size_reading,R_expected_px,drawn_diameter_px,R_drawn_px,verdict,sides_px,equilateral_err_pct,vertex_radii_px,vertical_side,bar_length_px,bar_width_px,straight,letter_pixels_identical_to_bmp,offset_vs_legacy_px,iou_vs_legacy,bmp_palette_letter_rgb
+100718a,condAN1,point,cond1: black point 0.1 diameter,black,0.1,0.6,-0.75,16,0,1.0,0.25,diameter,1.75,4x5,2.25,OK,,,,,,,,,,,
+100718a,condAN2,point,cond2: black point 0.05 diameter,black,0.05,0.6,-0.75,6,0,1.0,0.25,diameter,0.88,2x3,1.25,OK,,,,,,,,,,,
+100718a,condAN3,triangle_contour,cond3: black triangle contour 0.4 radius,black,0.8,0.6,-0.75,66,0,1.0,0.31,radius,14.0,,13.93,OK,24.2/24.0/24.2,0.8,14.5/13.4/13.9,straight,,,,,,,
+100718a,condAN4,circle_contour,cond4: black circle contour 0.3 radius,black,0.6,0.6,-0.75,60,0,1.0,0.25,radius,10.5,22x22,11.0,OK,,,,,,,,,,,
+100718a,condAN5,bar_vertical,"cond5: black bar vertical, 1deg",black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+100718a,condAN6,blank,Cond 6 Blank,none,,0.6,-0.75,0,,,,,,,,OK (blank),,,,,,,,,,,
+100718a,condAN7,bar_horizontal,cond7: black bar horizontal 1deg,black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+100718b,condAN1,point,cond1: black point 0.1 diameter,black,0.1,0.6,-0.75,16,0,1.0,0.25,diameter,1.75,4x5,2.25,OK,,,,,,,,,,,
+100718b,condAN2,point,cond2: black point 0.05 diameter,black,0.05,0.6,-0.75,6,0,1.0,0.25,diameter,0.88,2x3,1.25,OK,,,,,,,,,,,
+100718b,condAN3,triangle_contour,cond3: black triangle contour 0.4 radius,black,0.8,0.6,-0.75,66,0,1.0,0.31,radius,14.0,,13.93,OK,24.2/24.0/24.2,0.8,14.5/13.4/13.9,straight,,,,,,,
+100718b,condAN4,circle_contour,cond4: black circle contour 0.3 radius,black,0.6,0.6,-0.75,60,0,1.0,0.25,radius,10.5,22x22,11.0,OK,,,,,,,,,,,
+100718b,condAN5,bar_vertical,"cond5: black bar vertical, 1deg",black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+100718b,condAN6,blank,Cond 6 Blank,none,,0.6,-0.75,0,,,,,,,,OK (blank),,,,,,,,,,,
+100718b,condAN7,bar_horizontal,cond7: black bar horizontal 1deg,black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+130618c,condAN1,filled_circle,"cond1: Contrast curve - White filled circle rgb=(249,249,249)",white,0.3,0.6,-0.75,104,249,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618c,condAN2,filled_circle,"cond2: Contrast curve - White filled circle rgb=(0,0,0)",black,0.3,0.6,-0.75,104,0,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618c,condAN3,filled_circle,"cond3: Contrast curve - White filled circle rgb=(209,209,209)",white,0.3,0.6,-0.75,104,209,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618c,condAN4,filled_circle,"cond4: Contrast curve - White filled circle rgb=(198,198,198)",white,0.3,0.6,-0.75,104,198,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618c,condAN5,filled_circle,"cond5: Contrast curve - White filled circle rgb=(192,192,192)",white,0.3,0.6,-0.75,104,192,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618c,condAN7,filled_circle,"cond7: Contrast curve - White filled circle rgb=(190,190,190)",white,0.3,0.6,-0.75,104,190,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618d,condAN1,filled_circle,"cond1: Contrast curve - Black filled circle rgb=(0,0,0)",black,0.3,0.6,-0.75,104,0,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618d,condAN2,filled_circle,"cond2: Contrast curve - Black filled circle rgb=(249,249,249)",white,0.3,0.6,-0.75,104,249,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618d,condAN3,filled_circle,"cond3: Contrast curve - Black filled circle rgb=(158,158,158)",black,0.3,0.6,-0.75,104,158,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618d,condAN4,filled_circle,"cond4: Contrast curve - Black filled circle rgb=(173,173,173)",black,0.3,0.6,-0.75,104,173,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618d,condAN5,filled_circle,"cond5: Contrast curve - Black filled circle rgb=(179,179,179)",black,0.3,0.6,-0.75,104,179,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+130618d,condAN7,filled_circle,"cond7: Contrast curve - Black filled circle rgb=(182,182,182)",black,0.3,0.6,-0.75,104,182,1.0,0.25,catalog r= (diameter stored),5.25,12x11,5.75,OK,,,,,,,,,,,
+201118a,condAN1,letter,cond1: letter G,white,1.0,1.0,-0.9,139,0,1.0,0.92,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.448,"[0, 0, 0]"
+201118a,condAN2,letter,cond2: letter A,white,1.0,1.0,-0.9,117,0,1.0,0.57,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.272,"[0, 0, 0]"
+201118a,condAN3,letter,cond3: letter N,white,1.0,1.0,-0.9,103,0,1.0,0.5,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.01,"[0, 0, 0]"
+201118a,condAN4,letter,cond4: letter D,white,1.0,1.0,-0.9,111,0,1.0,3.35,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.261,"[0, 0, 0]"
+201118a,condAN5,letter,cond5: letter F,white,1.0,1.0,-0.9,103,0,1.0,7.48,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.493,"[0, 0, 0]"
+201118a,condAN7,letter,cond7: letter L,white,1.0,1.0,-0.9,69,0,1.0,11.5,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.327,"[0, 0, 0]"
+201118c,condAN1,letter,cond1: letter G,white,1.0,1.7,-0.8,139,0,1.0,0.93,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE,,,,,,,,True,"dx 0, dy 0",1.0,"[0, 0, 0]"
+201118c,condAN2,letter,cond2: letter A,white,1.0,1.7,-0.8,117,0,1.0,0.22,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE,,,,,,,,True,"dx 0, dy 0",1.0,"[0, 0, 0]"
+201118c,condAN3,letter,cond3: letter N,white,1.0,1.7,-0.8,103,0,1.0,0.5,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE,,,,,,,,True,"dx 0, dy 0",1.0,"[0, 0, 0]"
+201118c,condAN4,letter,cond4: letter D,white,1.0,1.7,-0.8,111,0,1.0,3.88,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE,,,,,,,,True,"dx 0, dy 0",1.0,"[0, 0, 0]"
+201118c,condAN5,letter,cond5: letter F,white,1.0,1.7,-0.8,103,0,1.0,8.19,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE,,,,,,,,True,"dx 0, dy 0",1.0,"[0, 0, 0]"
+201118c,condAN7,letter,cond7: letter L,white,1.0,1.7,-0.8,69,0,1.0,11.5,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE,,,,,,,,True,"dx 0, dy 0",1.0,"[0, 0, 0]"
+201118d,condAN1,letter,cond1: letter G,white,1.0,1.4,-0.8,139,0,1.0,0.5,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.448,"[0, 0, 0]"
+201118d,condAN2,letter,cond2: letter A,white,1.0,1.4,-0.8,117,0,1.0,0.55,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.272,"[0, 0, 0]"
+201118d,condAN3,letter,cond3: letter N,white,1.0,1.4,-0.8,103,0,1.0,0.71,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.01,"[0, 0, 0]"
+201118d,condAN4,letter,cond4: letter D,white,1.0,1.4,-0.8,111,0,1.0,3.38,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.261,"[0, 0, 0]"
+201118d,condAN5,letter,cond5: letter F,white,1.0,1.4,-0.8,103,0,1.0,7.86,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.493,"[0, 0, 0]"
+201118d,condAN7,letter,cond7: letter L,white,1.0,1.4,-0.8,69,0,1.0,11.14,unclear,,,,letter drawn BLACK but catalog / legacy say WHITE; 1-px offset vs legacy placement,,,,,,,,True,"dx 1, dy 0",0.327,"[0, 0, 0]"
+230518b,condAN1,filled_circle,"cond1: Contrast curve - White filled circle rgb=(249,249,249)",white,0.8,0.6,-0.75,657,249,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518b,condAN2,filled_circle,"cond2: Contrast curve - White filled circle rgb=(229,229,229)",white,0.8,0.6,-0.75,657,229,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518b,condAN3,filled_circle,"cond3: Contrast curve - White filled circle rgb=(209,209,209)",white,0.8,0.6,-0.75,657,209,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518b,condAN4,filled_circle,"cond4: Contrast curve - White filled circle rgb=(198,198,198)",white,0.8,0.6,-0.75,657,198,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518b,condAN5,filled_circle,"cond5: Contrast curve - White filled circle rgb=(192,192,192)",white,0.8,0.6,-0.75,657,192,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518b,condAN7,filled_circle,"cond7: Contrast curve - White filled circle rgb=(190,190,190)",white,0.8,0.6,-0.75,657,190,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518d,condAN1,filled_circle,"cond1: Contrast curve - Black filled circle rgb=(0,0,0)",black,0.8,0.6,-0.75,657,0,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518d,condAN2,filled_circle,"cond2: Contrast curve - Black filled circle rgb=(121,121,121)",black,0.8,0.6,-0.75,657,121,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518d,condAN3,filled_circle,"cond3: Contrast curve - Black filled circle rgb=(158,158,158)",black,0.8,0.6,-0.75,657,158,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518d,condAN4,filled_circle,"cond4: Contrast curve - Black filled circle rgb=(173,173,173)",black,0.8,0.6,-0.75,657,173,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518d,condAN5,filled_circle,"cond5: Contrast curve - Black filled circle rgb=(179,179,179)",black,0.8,0.6,-0.75,657,179,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+230518d,condAN7,filled_circle,"cond7: Contrast curve - Black filled circle rgb=(182,182,182)",black,0.8,0.6,-0.75,657,182,1.0,0.56,catalog r= (diameter stored),14.0,29x29,14.5,OK,,,,,,,,,,,
+240718a,condAN1,point,cond1: black point 0.1 diameter,black,0.1,0.6,-0.75,16,0,1.0,0.25,diameter,1.75,4x5,2.25,OK,,,,,,,,,,,
+240718a,condAN2,circle_contour,cond2: black circle contour 0.95 radius,black,1.9,0.0,0.0,48,0,1.0,30.05,radius,33.25,34x34,17.0,OK,,,,,,,,,,,
+240718a,condAN3,triangle_contour,cond3: black triangle contour 0.4 diameter,black,0.4,0.6,-0.75,34,0,1.0,0.26,diameter,7.0,,7.13,OK,12.5/12.0/12.5,4.3,7.5/6.7/7.2,straight,,,,,,,
+240718a,condAN4,circle_contour,cond4: black circle contour 0.3 diameter,black,0.3,0.6,-0.75,30,0,1.0,0.25,diameter,5.25,12x11,5.75,OK,,,,,,,,,,,
+240718a,condAN5,bar_vertical,cond5: black bar vertical,black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+240718a,condAN6,blank,Cond 6 Blank,none,,0.6,-0.75,0,,,,,,,,OK (blank),,,,,,,,,,,
+240718a,condAN7,bar_horizontal,cond6: black bar horizontal,black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+240718b,condAN1,point,cond1: black point 0.1 diameter,black,0.1,0.6,-0.75,16,0,1.0,0.25,diameter,1.75,4x5,2.25,OK,,,,,,,,,,,
+240718b,condAN2,circle_contour,cond2: black circle contour 0.95 radius,black,1.9,0.0,0.0,48,0,1.0,30.05,radius,33.25,34x34,17.0,OK,,,,,,,,,,,
+240718b,condAN3,triangle_contour,cond3: black triangle contour 0.4 diameter,black,0.4,0.6,-0.75,34,0,1.0,0.26,diameter,7.0,,7.13,OK,12.5/12.0/12.5,4.3,7.5/6.7/7.2,straight,,,,,,,
+240718b,condAN4,circle_contour,cond4: black circle contour 0.3 diameter,black,0.3,0.6,-0.75,30,0,1.0,0.25,diameter,5.25,12x11,5.75,OK,,,,,,,,,,,
+240718b,condAN5,bar_vertical,cond5: black bar vertical,black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+240718b,condAN6,blank,Cond 6 Blank,none,,0.6,-0.75,0,,,,,,,,OK (blank),,,,,,,,,,,
+240718b,condAN7,bar_horizontal,cond6: black bar horizontal,black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+240718c,condAN1,point,cond1: black point 0.1 diameter,black,0.1,0.6,-0.75,16,0,1.0,0.25,diameter,1.75,4x5,2.25,OK,,,,,,,,,,,
+240718c,condAN2,circle_contour,cond2: black circle contour 0.95 radius,black,1.9,0.0,0.0,48,0,1.0,30.05,radius,33.25,34x34,17.0,OK,,,,,,,,,,,
+240718c,condAN3,triangle_contour,cond3: black triangle contour 0.4 diameter,black,0.4,0.6,-0.75,34,0,1.0,0.26,diameter,7.0,,7.13,OK,12.5/12.0/12.5,4.3,7.5/6.7/7.2,straight,,,,,,,
+240718c,condAN4,circle_contour,cond4: black circle contour 0.3 diameter,black,0.3,0.6,-0.75,30,0,1.0,0.25,diameter,5.25,12x11,5.75,OK,,,,,,,,,,,
+240718c,condAN5,bar_vertical,cond5: black bar vertical,black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+240718c,condAN6,blank,Cond 6 Blank,none,,0.6,-0.75,0,,,,,,,,OK (blank),,,,,,,,,,,
+240718c,condAN7,bar_horizontal,cond6: black bar horizontal,black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+270618b,condAN1,point,cond1: black point 0.1 diameter,black,0.1,0.6,-0.75,16,0,1.0,0.25,diameter,1.75,4x5,2.25,OK,,,,,,,,,,,
+270618b,condAN2,point,cond2: black point 0.05 diameter,black,0.05,0.6,-0.75,6,0,1.0,0.25,diameter,0.88,2x3,1.25,OK,,,,,,,,,,,
+270618b,condAN3,triangle_contour,cond3: black triangle contour 0.4 diameter,black,0.4,0.6,-0.75,34,0,1.0,0.26,diameter,7.0,,7.13,OK,12.5/12.0/12.5,4.3,7.5/6.7/7.2,straight,,,,,,,
+270618b,condAN4,circle_contour,cond4: black circle contour 0.3 diameter,black,0.3,0.6,-0.75,30,0,1.0,0.25,diameter,5.25,12x11,5.75,OK,,,,,,,,,,,
+270618b,condAN5,bar_vertical,cond5: black bar vertical,black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+270618b,condAN7,bar_horizontal,cond7: black bar horizontal,black,1.0,0.6,-0.75,35,0,1.0,0.56,unclear,,,,OK,,,,,35.0,1.0,True,,,,
+290518a,condAN1,point,cond1: white point 0.1 diameter/radius?,white,0.1,0.6,-0.75,16,255,1.0,0.25,unclear (read as diameter),1.75,4x5,2.25,OK,,,,,,,,,,,
+290518a,condAN2,filled_circle,cond2: white filled circle 0.3 diameter/radius?,white,0.3,0.6,-0.75,104,255,1.0,0.25,unclear (read as diameter),5.25,12x11,5.75,OK,,,,,,,,,,,
+290518a,condAN3,circle_contour,cond3: white circle contour 0.3 d/r?,white,0.3,0.6,-0.75,30,255,1.0,0.25,unclear (read as diameter),5.25,12x11,5.75,OK,,,,,,,,,,,
+290518a,condAN4,point,cond4: black point 0.1 d/r?,black,0.1,0.6,-0.75,16,0,1.0,0.25,unclear (read as diameter),1.75,4x5,2.25,OK,,,,,,,,,,,
+290518a,condAN5,filled_circle,cond5: black filled circle 0.3 d/r?,black,0.3,0.6,-0.75,104,0,1.0,0.25,unclear (read as diameter),5.25,12x11,5.75,OK,,,,,,,,,,,
+290518a,condAN6,blank,Cond 6 Blank,none,,0.6,-0.75,0,,,,,,,,OK (blank),,,,,,,,,,,
+290518a,condAN7,circle_contour,cond7: black circle contour 0.3 d/r?,black,0.3,0.6,-0.75,30,0,1.0,0.25,unclear (read as diameter),5.25,12x11,5.75,OK,,,,,,,,,,,

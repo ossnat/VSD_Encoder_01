@@ -26,15 +26,17 @@ def create_cart_stim(*, extent_deg: float | None = None, ppd: int = PPD) -> np.n
     with white borders on all four edges — matching thesis Fig. 12 A/B(i) at 3°.
     """
     stimulus = np.full((LEGACY_ROWS, LEGACY_COLS), BG, dtype=np.float64)
-    for rad in range(0, LEGACY_ROWS, ppd):
-        r = 0 if rad == 0 else rad
+    # MATLAB indices are 1-based: rows/cols 1, 35, 70, ... and 17, 52, 87, ... -> 0-based 0, 34, 69, ... and 16, 51, 86, ...
+    # (fixed Nov 17 2026: the port used them as 0-based, which shifted every line but the first by +1 px)
+    for rad in range(0, LEGACY_ROWS + 1, ppd):
+        r = 0 if rad == 0 else rad - 1
         stimulus[r, :] = 255
         stimulus[:, r] = 255
     # MATLAB create_cart_stim.m hardcodes 17 for ppd=35 (not round(ppd/2)=18).
     half = 17 if ppd == 35 else max(int(ppd // 2), 1)
-    for hrad in range(half, LEGACY_ROWS, ppd):
-        stimulus[hrad, :] = 255
-        stimulus[:, hrad] = 255
+    for hrad in range(half, LEGACY_ROWS + 1, ppd):
+        stimulus[hrad - 1, :] = 255
+        stimulus[:, hrad - 1] = 255
     rgb = _gray_rgb(stimulus)
     if extent_deg is None:
         return rgb

@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Build rendered stimulus images from EncoderData CSV catalogs."""
+"""Build rendered stimulus images from EncoderData CSV catalogs.
+
+Stimulus library layout (Data/VSD_Encoder_01/stimuli/<monkey>/):
+  library/<stimulus_uid>.png   one image per distinct stimulus (shape, size, colour/RGB, position, background)
+  library.parquet              one row per stimulus_uid
+  lookup.parquet               (h5_session, condition) -> stimulus_uid; several conditions can share a stimulus
+  manifest.parquet             one row per (h5_session, condition), as before, with stimulus_uid;
+                               image_path points into library/
+Conditions that resolve to the same uid must render to identical pixels (checked here).
+"""
 
 from __future__ import annotations
 
@@ -25,10 +34,14 @@ from src.stimuli.contrast_letters_catalog import (
 )
 from src.stimuli.plotting import plot_all_stimuli
 from src.stimuli.render import RenderConfig, render_stimulus
+from src.stimuli.identity import stimulus_uid_from_row
 from src.stimuli.schema import (
+    library_dir,
+    library_image_path,
+    library_table_path,
+    lookup_path,
     manifest_path,
     parsed_catalog_path,
-    stimulus_image_path,
 )
 
 
@@ -122,11 +135,12 @@ def build_stimulus_images(
     plot_entries: list[tuple[dict, object]] = []
 
     specs = [_coerce_spec(row) for row in parsed_df.to_dict(orient="records")]
+    rendered: dict[str, np.ndarray] = {}
     for spec in specs:
-        out_path = stimulus_image_path(
-            stimuli_root, spec.monkey, spec.h5_session, spec.condition
-        )
+        uid = stimulus_uid_from_row(spec.__dict__, default_background=render_cfg.background_gray)
+        out_path = library_image_path(stimuli_root, spec.monkey, uid)
         meta = {
+            "stimulus_uid": uid,
             "monkey": spec.monkey,
             "csv_date": spec.csv_date,
             "session_letter": spec.session_letter,
@@ -158,12 +172,19 @@ def build_stimulus_images(
         should_render = (
             only_shape_types is None or spec.shape_type in only_shape_types
         )
-        if out_path.exists() and not (should_render and overwrite):
-            image = np.asarray(Image.open(out_path))
+        if uid in rendered:
+            image = rendered[uid]
+            # Same uid must mean the same picture.
+            check = render_stimulus(spec, render_cfg)
+            if not np.array_equal(check, image):
+                raise RuntimeError(f"{spec.h5_session} {spec.condition}: same uid {uid} but different pixels")
+        elif out_path.exists() and not (should_render and overwrite):
+            image = np.asarray(Image.open(out_path).convert("RGB"))
         else:
             image = render_stimulus(spec, render_cfg)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             Image.fromarray(image).save(out_path)
+        rendered[uid] = image
 
         manifest_rows.append(meta)
         plot_entries.append((meta, image))
@@ -179,6 +200,24 @@ def build_stimulus_images(
     out_manifest = manifest_path(stimuli_root, monkey)
     manifest_df.to_parquet(out_manifest, index=False)
 
+    # Library table (one row per stimulus) and lookup table (session/condition -> stimulus).
+    lookup_df = manifest_df[["h5_session", "condition", "condition_num", "stimulus_uid"]].copy()
+    lookup_df.to_parquet(lookup_path(stimuli_root, monkey), index=False)
+    lib_cols = ["stimulus_uid", "shape_type", "color", "rgb", "size_deg", "pos_x_deg", "pos_y_deg",
+                "background_gray", "letter", "source_path", "is_blank", "size_note", "image_path"]
+    first = manifest_df.drop_duplicates("stimulus_uid")[lib_cols].copy()
+    uses = manifest_df.groupby("stimulus_uid").apply(
+        lambda g: ", ".join(f"{s}:{c}" for s, c in zip(g.h5_session, g.condition)), include_groups=False
+    ).rename("used_in")
+    texts = manifest_df.groupby("stimulus_uid").stimulus_text.apply(lambda t: " | ".join(sorted(set(t)))).rename("catalog_texts")
+    library_df = first.merge(uses, on="stimulus_uid").merge(texts, on="stimulus_uid")
+    library_df["n_uses"] = library_df.used_in.str.count(",") + 1
+    library_df.sort_values("stimulus_uid").reset_index(drop=True).to_parquet(library_table_path(stimuli_root, monkey), index=False)
+    stale = sorted(p.name for p in library_dir(stimuli_root, monkey).glob("*.png")
+                   if p.stem not in set(library_df.stimulus_uid))
+    if stale:
+        print(f"WARNING: {len(stale)} library images are not used by any condition: {stale[:5]}...")
+
     plot_dir = plots_root / monkey
     plot_paths = plot_all_stimuli(plot_entries, plot_dir)
 
@@ -187,6 +226,9 @@ def build_stimulus_images(
         "catalog_paths": catalog_paths,
         "manifest_path": _portable_path(out_manifest, repo),
         "n_stimuli": int(len(manifest_df)),
+        "n_library_images": int(manifest_df.stimulus_uid.nunique()),
+        "library_path": _portable_path(library_dir(stimuli_root, monkey), repo),
+        "lookup_path": _portable_path(lookup_path(stimuli_root, monkey), repo),
         "render_config": render_cfg.__dict__,
         "created": datetime.now(timezone.utc).isoformat(),
         "plot_dir": str(plot_dir.relative_to(repo)),
@@ -199,7 +241,8 @@ def build_stimulus_images(
     print(f"Catalogs: {catalog_paths}")
     print(f"Stimuli rendered: {len(manifest_df)}")
     print(f"Manifest: {_portable_path(out_manifest, repo)}")
-    print(f"Images root: {_portable_path(stimuli_root / monkey / 'images', repo)}")
+    print(f"Library: {_portable_path(library_dir(stimuli_root, monkey), repo)} "
+          f"({manifest_df.stimulus_uid.nunique()} images for {len(manifest_df)} session-conditions)")
     print("QC plots:")
     for p in plot_paths:
         print(f"  {p.relative_to(repo)}")

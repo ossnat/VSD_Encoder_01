@@ -1,18 +1,16 @@
 session,condition,source,label,x_deg,y_deg,cam_row,cam_col,pair_id,quality,note
 100718a,condAN1,auto,point centre,0.6,-0.75,38.0,43.0,,5.630987644195557,
 100718a,condAN2,auto,point centre,0.6,-0.75,9.0,36.0,,5.54594087600708,
-100718a,condAN4,auto,circle_contour centre,0.6,-0.75,42.0,53.0,,7.894010066986084,
 100718a,condAN5,auto,bar_vertical end,0.6,-0.25,8.0,40.0,100718a|condAN5,4.129612445831299,end order unknown
 100718a,condAN5,auto,bar_vertical end,0.6,-1.25,46.0,28.0,100718a|condAN5,3.33273983001709,end order unknown
-100718a,condAN7,auto,bar_horizontal end,0.09999999999999998,-0.75,10.0,37.0,100718a|condAN7,6.767954349517822,end order unknown
+100718a,condAN7,auto,bar_horizontal end,0.0999999999999999,-0.75,10.0,37.0,100718a|condAN7,6.767954349517822,end order unknown
 100718a,condAN7,auto,bar_horizontal end,1.1,-0.75,50.0,57.0,100718a|condAN7,4.460319519042969,end order unknown
 100718b,condAN1,auto,point centre,0.6,-0.75,37.0,43.0,,8.250414848327637,
 100718b,condAN2,auto,point centre,0.6,-0.75,38.0,41.0,,6.464745998382568,
 100718b,condAN5,auto,bar_vertical end,0.6,-0.25,45.0,25.0,100718b|condAN5,7.676344394683838,end order unknown
 100718b,condAN5,auto,bar_vertical end,0.6,-1.25,35.0,71.0,100718b|condAN5,6.3548264503479,end order unknown
-100718b,condAN7,auto,bar_horizontal end,0.09999999999999998,-0.75,10.0,38.0,100718b|condAN7,7.900297164916992,end order unknown
+100718b,condAN7,auto,bar_horizontal end,0.0999999999999999,-0.75,10.0,38.0,100718b|condAN7,7.900297164916992,end order unknown
 100718b,condAN7,auto,bar_horizontal end,1.1,-0.75,47.0,48.0,100718b|condAN7,6.803765296936035,end order unknown
-100718b,condAN4,auto,circle_contour centre,0.6,-0.75,43.0,26.0,,9.10092544555664,
 130618c,condAN1,auto,filled_circle centre,0.6,-0.75,40.0,40.0,,11.417378425598145,
 130618c,condAN2,auto,filled_circle centre,0.6,-0.75,40.0,41.0,,11.000399589538574,
 130618c,condAN3,auto,filled_circle centre,0.6,-0.75,40.0,42.0,,6.603330612182617,
@@ -35,20 +33,26 @@ session,condition,source,label,x_deg,y_deg,cam_row,cam_col,pair_id,quality,note
 240718a,condAN4,auto,circle_contour centre,0.6,-0.75,38.0,66.0,,7.18512487411499,
 240718a,condAN5,auto,bar_vertical end,0.6,-0.25,32.0,74.0,240718a|condAN5,4.2084059715271,end order unknown
 240718a,condAN5,auto,bar_vertical end,0.6,-1.25,45.0,26.0,240718a|condAN5,3.7775180339813232,end order unknown
+240718a,condAN7,auto,bar_horizontal end,0.0999999999999999,-0.75,8.0,41.0,240718a|condAN7,4.840970516204834,end order unknown
+240718a,condAN7,auto,bar_horizontal end,1.1,-0.75,12.0,24.0,240718a|condAN7,4.008569717407227,end order unknown
 240718b,condAN1,auto,point centre,0.6,-0.75,71.0,72.0,,3.1629483699798584,
 240718b,condAN4,auto,circle_contour centre,0.6,-0.75,43.0,46.0,,7.14208984375,
 240718b,condAN5,auto,bar_vertical end,0.6,-0.25,32.0,70.0,240718b|condAN5,5.615234851837158,end order unknown
 240718b,condAN5,auto,bar_vertical end,0.6,-1.25,45.0,30.0,240718b|condAN5,4.912277698516846,end order unknown
+240718b,condAN7,auto,bar_horizontal end,0.0999999999999999,-0.75,9.0,40.0,240718b|condAN7,5.615314483642578,end order unknown
+240718b,condAN7,auto,bar_horizontal end,1.1,-0.75,11.0,25.0,240718b|condAN7,4.0335845947265625,end order unknown
 240718c,condAN1,auto,point centre,0.6,-0.75,70.0,74.0,,4.264670372009277,
 240718c,condAN4,auto,circle_contour centre,0.6,-0.75,37.0,31.0,,5.532382965087891,
 240718c,condAN5,auto,bar_vertical end,0.6,-0.25,32.0,72.0,240718c|condAN5,8.327149391174316,end order unknown
 240718c,condAN5,auto,bar_vertical end,0.6,-1.25,44.0,26.0,240718c|condAN5,6.757900238037109,end order unknown
+240718c,condAN7,auto,bar_horizontal end,0.0999999999999999,-0.75,46.0,53.0,240718c|condAN7,5.034547328948975,end order unknown
+240718c,condAN7,auto,bar_horizontal end,1.1,-0.75,71.0,72.0,240718c|condAN7,4.122874736785889,end order unknown
 270618b,condAN1,auto,point centre,0.6,-0.75,8.0,42.0,,4.314791679382324,
 270618b,condAN2,auto,point centre,0.6,-0.75,73.0,69.0,,3.4930920600891113,
 270618b,condAN4,auto,circle_contour centre,0.6,-0.75,44.0,27.0,,5.2648234367370605,
-270618b,condAN5,auto,bar_vertical end,0.6,-0.25,45.0,25.0,270618b|condAN5,9.106451988220215,end order unknown
+270618b,condAN5,auto,bar_vertical end,0.6,-0.25,45.0,25.0,270618b|condAN5,9.106451988220217,end order unknown
 270618b,condAN5,auto,bar_vertical end,0.6,-1.25,34.0,70.0,270618b|condAN5,7.0192694664001465,end order unknown
-270618b,condAN7,auto,bar_horizontal end,0.09999999999999998,-0.75,10.0,39.0,270618b|condAN7,7.624817848205566,end order unknown
+270618b,condAN7,auto,bar_horizontal end,0.0999999999999999,-0.75,10.0,39.0,270618b|condAN7,7.624817848205566,end order unknown
 270618b,condAN7,auto,bar_horizontal end,1.1,-0.75,47.0,50.0,270618b|condAN7,5.529601573944092,end order unknown
 290518a,condAN1,auto,point centre,0.6,-0.75,8.0,8.0,,5.057819843292236,
 290518a,condAN2,auto,filled_circle centre,0.6,-0.75,8.0,8.0,,3.9330759048461914,
@@ -56,29 +60,29 @@ session,condition,source,label,x_deg,y_deg,cam_row,cam_col,pair_id,quality,note
 290518a,condAN4,auto,point centre,0.6,-0.75,42.0,44.0,,6.9317450523376465,
 290518a,condAN5,auto,filled_circle centre,0.6,-0.75,11.0,48.0,,4.055356025695801,
 290518a,condAN7,auto,circle_contour centre,0.6,-0.75,44.0,30.0,,8.56296157836914,
-201118a,,manual,Joanna 201118 #1,1.8857142857142857,-0.22857142857142856,66.0,46.0,,,day-level points (session within 20/11/18 not recorded)
-201118a,,manual,Joanna 201118 #2,0.9142857142857143,-0.7142857142857143,40.0,47.0,,,day-level points (session within 20/11/18 not recorded)
+201118a,,manual,Joanna 201118 #1,1.8857142857142857,-0.2285714285714285,66.0,46.0,,,day-level points (session within 20/11/18 not recorded)
+201118a,,manual,Joanna 201118 #2,0.9142857142857144,-0.7142857142857143,40.0,47.0,,,day-level points (session within 20/11/18 not recorded)
 201118a,,manual,Joanna 201118 #3,0.5142857142857142,-1.4,30.0,77.0,,,day-level points (session within 20/11/18 not recorded)
-201118a,,manual,Joanna 201118 #4,1.4857142857142858,-0.9142857142857143,45.0,61.0,,,day-level points (session within 20/11/18 not recorded)
-201118a,,manual,Joanna 201118 #5,0.5142857142857142,-0.42857142857142855,35.0,24.0,,,day-level points (session within 20/11/18 not recorded)
-201118a,,manual,Joanna 201118 #6,1.4,-0.22857142857142856,56.0,39.0,,,day-level points (session within 20/11/18 not recorded)
-201118a,,manual,Joanna 201118 #7,0.5142857142857142,-0.9142857142857143,31.0,52.0,,,day-level points (session within 20/11/18 not recorded)
+201118a,,manual,Joanna 201118 #4,1.4857142857142858,-0.9142857142857144,45.0,61.0,,,day-level points (session within 20/11/18 not recorded)
+201118a,,manual,Joanna 201118 #5,0.5142857142857142,-0.4285714285714285,35.0,24.0,,,day-level points (session within 20/11/18 not recorded)
+201118a,,manual,Joanna 201118 #6,1.4,-0.2285714285714285,56.0,39.0,,,day-level points (session within 20/11/18 not recorded)
+201118a,,manual,Joanna 201118 #7,0.5142857142857142,-0.9142857142857144,31.0,52.0,,,day-level points (session within 20/11/18 not recorded)
 201118a,,manual,Joanna 201118 #8,1.8857142857142857,-1.2,50.0,79.0,,,day-level points (session within 20/11/18 not recorded)
-201118c,,manual,Joanna 201118 #1,1.8857142857142857,-0.22857142857142856,66.0,46.0,,,day-level points (session within 20/11/18 not recorded)
-201118c,,manual,Joanna 201118 #2,0.9142857142857143,-0.7142857142857143,40.0,47.0,,,day-level points (session within 20/11/18 not recorded)
+201118c,,manual,Joanna 201118 #1,1.8857142857142857,-0.2285714285714285,66.0,46.0,,,day-level points (session within 20/11/18 not recorded)
+201118c,,manual,Joanna 201118 #2,0.9142857142857144,-0.7142857142857143,40.0,47.0,,,day-level points (session within 20/11/18 not recorded)
 201118c,,manual,Joanna 201118 #3,0.5142857142857142,-1.4,30.0,77.0,,,day-level points (session within 20/11/18 not recorded)
-201118c,,manual,Joanna 201118 #4,1.4857142857142858,-0.9142857142857143,45.0,61.0,,,day-level points (session within 20/11/18 not recorded)
-201118c,,manual,Joanna 201118 #5,0.5142857142857142,-0.42857142857142855,35.0,24.0,,,day-level points (session within 20/11/18 not recorded)
-201118c,,manual,Joanna 201118 #6,1.4,-0.22857142857142856,56.0,39.0,,,day-level points (session within 20/11/18 not recorded)
-201118c,,manual,Joanna 201118 #7,0.5142857142857142,-0.9142857142857143,31.0,52.0,,,day-level points (session within 20/11/18 not recorded)
+201118c,,manual,Joanna 201118 #4,1.4857142857142858,-0.9142857142857144,45.0,61.0,,,day-level points (session within 20/11/18 not recorded)
+201118c,,manual,Joanna 201118 #5,0.5142857142857142,-0.4285714285714285,35.0,24.0,,,day-level points (session within 20/11/18 not recorded)
+201118c,,manual,Joanna 201118 #6,1.4,-0.2285714285714285,56.0,39.0,,,day-level points (session within 20/11/18 not recorded)
+201118c,,manual,Joanna 201118 #7,0.5142857142857142,-0.9142857142857144,31.0,52.0,,,day-level points (session within 20/11/18 not recorded)
 201118c,,manual,Joanna 201118 #8,1.8857142857142857,-1.2,50.0,79.0,,,day-level points (session within 20/11/18 not recorded)
-201118d,,manual,Joanna 201118 #1,1.8857142857142857,-0.22857142857142856,66.0,46.0,,,day-level points (session within 20/11/18 not recorded)
-201118d,,manual,Joanna 201118 #2,0.9142857142857143,-0.7142857142857143,40.0,47.0,,,day-level points (session within 20/11/18 not recorded)
+201118d,,manual,Joanna 201118 #1,1.8857142857142857,-0.2285714285714285,66.0,46.0,,,day-level points (session within 20/11/18 not recorded)
+201118d,,manual,Joanna 201118 #2,0.9142857142857144,-0.7142857142857143,40.0,47.0,,,day-level points (session within 20/11/18 not recorded)
 201118d,,manual,Joanna 201118 #3,0.5142857142857142,-1.4,30.0,77.0,,,day-level points (session within 20/11/18 not recorded)
-201118d,,manual,Joanna 201118 #4,1.4857142857142858,-0.9142857142857143,45.0,61.0,,,day-level points (session within 20/11/18 not recorded)
-201118d,,manual,Joanna 201118 #5,0.5142857142857142,-0.42857142857142855,35.0,24.0,,,day-level points (session within 20/11/18 not recorded)
-201118d,,manual,Joanna 201118 #6,1.4,-0.22857142857142856,56.0,39.0,,,day-level points (session within 20/11/18 not recorded)
-201118d,,manual,Joanna 201118 #7,0.5142857142857142,-0.9142857142857143,31.0,52.0,,,day-level points (session within 20/11/18 not recorded)
+201118d,,manual,Joanna 201118 #4,1.4857142857142858,-0.9142857142857144,45.0,61.0,,,day-level points (session within 20/11/18 not recorded)
+201118d,,manual,Joanna 201118 #5,0.5142857142857142,-0.4285714285714285,35.0,24.0,,,day-level points (session within 20/11/18 not recorded)
+201118d,,manual,Joanna 201118 #6,1.4,-0.2285714285714285,56.0,39.0,,,day-level points (session within 20/11/18 not recorded)
+201118d,,manual,Joanna 201118 #7,0.5142857142857142,-0.9142857142857144,31.0,52.0,,,day-level points (session within 20/11/18 not recorded)
 201118d,,manual,Joanna 201118 #8,1.8857142857142857,-1.2,50.0,79.0,,,day-level points (session within 20/11/18 not recorded)
 100718a,,manual,Joanna 100718 #1,0.6,-0.7428571428571429,38.0,43.0,,,day-level points (opt-points-10-07-18.xlsx)
 100718a,,manual,Joanna 100718 #2,0.4,-0.4,35.0,20.0,,,day-level points (opt-points-10-07-18.xlsx)
@@ -88,8 +92,8 @@ session,condition,source,label,x_deg,y_deg,cam_row,cam_col,pair_id,quality,note
 100718a,,manual,Joanna 100718 #6,0.6,-1.0571428571428572,35.0,57.0,,,day-level points (opt-points-10-07-18.xlsx)
 100718a,,manual,Joanna 100718 #7,0.6,-0.2571428571428571,45.0,23.0,,,day-level points (opt-points-10-07-18.xlsx)
 100718a,,manual,Joanna 100718 #8,0.6,-1.2285714285714286,35.0,69.0,,,day-level points (opt-points-10-07-18.xlsx)
-100718a,,manual,Joanna 100718 #9,0.11428571428571428,-0.7428571428571429,23.0,36.0,,,day-level points (opt-points-10-07-18.xlsx)
-100718a,,manual,Joanna 100718 #10,1.0857142857142856,-0.7428571428571429,50.0,47.0,,,day-level points (opt-points-10-07-18.xlsx)
+100718a,,manual,Joanna 100718 #9,0.1142857142857142,-0.7428571428571429,23.0,36.0,,,day-level points (opt-points-10-07-18.xlsx)
+100718a,,manual,Joanna 100718 #10,1.0857142857142856,-0.7428571428571429,47.0,50.0,,,day-level points (opt-points-10-07-18.xlsx)
 100718b,,manual,Joanna 100718 #1,0.6,-0.7428571428571429,38.0,43.0,,,day-level points (opt-points-10-07-18.xlsx)
 100718b,,manual,Joanna 100718 #2,0.4,-0.4,35.0,20.0,,,day-level points (opt-points-10-07-18.xlsx)
 100718b,,manual,Joanna 100718 #3,0.4,-1.0857142857142856,29.0,59.0,,,day-level points (opt-points-10-07-18.xlsx)
@@ -98,5 +102,5 @@ session,condition,source,label,x_deg,y_deg,cam_row,cam_col,pair_id,quality,note
 100718b,,manual,Joanna 100718 #6,0.6,-1.0571428571428572,35.0,57.0,,,day-level points (opt-points-10-07-18.xlsx)
 100718b,,manual,Joanna 100718 #7,0.6,-0.2571428571428571,45.0,23.0,,,day-level points (opt-points-10-07-18.xlsx)
 100718b,,manual,Joanna 100718 #8,0.6,-1.2285714285714286,35.0,69.0,,,day-level points (opt-points-10-07-18.xlsx)
-100718b,,manual,Joanna 100718 #9,0.11428571428571428,-0.7428571428571429,23.0,36.0,,,day-level points (opt-points-10-07-18.xlsx)
-100718b,,manual,Joanna 100718 #10,1.0857142857142856,-0.7428571428571429,50.0,47.0,,,day-level points (opt-points-10-07-18.xlsx)
+100718b,,manual,Joanna 100718 #9,0.1142857142857142,-0.7428571428571429,23.0,36.0,,,day-level points (opt-points-10-07-18.xlsx)
+100718b,,manual,Joanna 100718 #10,1.0857142857142856,-0.7428571428571429,47.0,50.0,,,day-level points (opt-points-10-07-18.xlsx)

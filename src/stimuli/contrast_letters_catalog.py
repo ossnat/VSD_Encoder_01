@@ -191,6 +191,16 @@ def _letter_source_path(
     )
 
 
+def _blank_spec(*, monkey, current_date, session_letter, h5, cond_num, pos_x, pos_y, background, text):
+    """Blank condition (Excel 'Blank'): an empty canvas on the session background, as in the shapes catalog."""
+    return StimulusSpec(
+        monkey=monkey, csv_date=current_date, session_letter=session_letter, h5_session=h5,
+        condition=condition_label(cond_num), condition_num=cond_num, stimulus_text=text, color="none",
+        shape_type="blank", size_deg=None, pos_x_deg=pos_x, pos_y_deg=pos_y, is_blank=True, cortex_file=None,
+        rgb=None, letter=None, source_path=None, background_gray=int(background),
+    )
+
+
 def parse_contrast_letters_rows(
     df: pd.DataFrame,
     *,
@@ -257,13 +267,16 @@ def parse_contrast_letters_rows(
                 col = f"Cond{cond_num}"
                 if col not in row.index:
                     continue
-                if cond_num in (6, 8):
-                    continue
                 cell = row.get(col)
                 if pd.isna(cell) or not str(cell).strip():
                     continue
                 kind, gray = _parse_contrast_cell(str(cell))
-                if kind in {"blank", "error", "skip"}:
+                if kind == "blank":
+                    rows_out.append(_blank_spec(monkey=monkey, current_date=current_date, session_letter=session_letter,
+                                                h5=h5, cond_num=cond_num, pos_x=pos_x, pos_y=pos_y, background=polarity_bg,
+                                                text=f"Cond {cond_num} Blank ({polarity_bg})"))
+                    continue
+                if kind in {"error", "skip"}:
                     continue
                 assert gray is not None
                 # Use the catalog RGB as written. (Earlier versions forced the session polarity here, which
@@ -309,13 +322,16 @@ def parse_contrast_letters_rows(
                 col = f"Cond{cond_num}"
                 if col not in row.index:
                     continue
-                if cond_num in (6, 8):
-                    continue
                 cell = row.get(col)
                 if pd.isna(cell) or not str(cell).strip():
                     continue
                 token = str(cell).strip()
-                if "blank" in token.lower() or "error" in token.lower():
+                if "blank" in token.lower():
+                    rows_out.append(_blank_spec(monkey=monkey, current_date=current_date, session_letter=session_letter,
+                                                h5=h5, cond_num=cond_num, pos_x=pos_x, pos_y=pos_y, background=128,
+                                                text=f"Cond {cond_num} Blank"))
+                    continue
+                if "error" in token.lower():
                     continue
                 if len(token) != 1 or not token.isalpha():
                     raise ValueError(

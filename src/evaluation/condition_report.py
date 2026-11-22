@@ -65,8 +65,11 @@ def load_feature_shape(
     feature_layer: str,
 ) -> tuple[int, ...]:
     feat_root = resolve_data_path(cfg["paths"]["dl_features_stimuli_root"], repo)
-    maps_dir = feat_root / cfg["monkey"] / model_slug_str / feature_layer / "maps"
-    npy_files = sorted(maps_dir.glob("*.npy"))
+    from src.DL_features.schema import UID_MAPS_DIRNAME
+
+    layer_dir = feat_root / cfg["monkey"] / model_slug_str / feature_layer
+    maps_dir = layer_dir / UID_MAPS_DIRNAME
+    npy_files = sorted(maps_dir.glob("*.npy")) or sorted((layer_dir / "maps").glob("*.npy"))
     if not npy_files:
         raise FileNotFoundError(f"No feature maps under {maps_dir}")
     arr = np.load(npy_files[0])

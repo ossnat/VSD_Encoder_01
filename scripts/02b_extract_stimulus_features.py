@@ -19,7 +19,7 @@ from src.DL_features.backbone import (
     feature_layers_for_type,
 )
 from src.DL_features.extract_stimulus import extract_stimulus_features
-from src.DL_features.schema import model_slug, stimulus_feature_dir, stimulus_map_path
+from src.DL_features.schema import UID_FEATURE_MANIFEST, model_slug, stimulus_feature_dir, stimulus_map_path
 from src.encoding.pairs import dedupe_stimulus_manifest
 from src.paths import project_root, resolve_data_path, workspace_root
 from src.stimuli.schema import manifest_path as stimulus_manifest_path
@@ -142,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
         overwrite=args.overwrite,
     )
 
-    feat_manifest = out_dir / "manifest.parquet"
+    feat_manifest = out_dir / UID_FEATURE_MANIFEST   # one row per (session, condition); feature_path shared per stimulus_uid
     if args.only_shape_types and feat_manifest.is_file():
         # Merge bar (or other filtered) rows into the existing full feature manifest.
         existing = pd.read_parquet(feat_manifest)
@@ -186,7 +186,8 @@ def main(argv: list[str] | None = None) -> int:
         "stimulus_manifest": _portable_path(stim_manifest_path, repo),
         "feature_manifest": _portable_path(feat_manifest, repo),
     }
-    with (out_dir / "config.json").open("w") as f:
+    run_cfg["n_feature_files"] = int(feat_df["feature_path"].nunique()) if not feat_df.empty else 0
+    with (out_dir / "config_by_uid.json").open("w") as f:
         json.dump(run_cfg, f, indent=2)
 
     print(f"Monkey: {monkey}")
@@ -196,7 +197,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Map shape (C, H, W): {sample_shape}")
     print(f"Device: {device}")
     print(f"Stimuli in manifest: {len(manifest)}")
-    print(f"Maps written: {n_written} (skipped existing: {n_skipped})")
+    print(f"Maps written: {n_written} (skipped existing: {n_skipped}); "
+          f"{feat_df['feature_path'].nunique() if not feat_df.empty else 0} files for {len(feat_df)} session-conditions")
     print(f"Feature manifest: {_portable_path(feat_manifest, repo)}")
     return 0
 

@@ -49,3 +49,17 @@ Re-rendered with `scripts/01b_build_stimulus_images.py --overwrite` after these 
 Result: every check passes except the letter colour (left on purpose). Catalogue of all distinct stimuli:
 `Data/VSD_Encoder_01/stimuli/gandalf/stimulus_catalog_gandalf.pdf` (`make_stimulus_catalog_pdf.py`).
 Downstream still to redo: CNN features / encoding pairs for the changed images (and 24/07 condAN7 is new).
+
+## Stimulus library (Nov 16 2026)
+
+`Data/VSD_Encoder_01/stimuli/gandalf/`: `library/<stimulus_uid>.png` (55 images), `library.parquet`, `lookup.parquet`
+(97 session-conditions → uid), `manifest.parquet` (as before + `stimulus_uid`, image_path → library),
+`catalog_check_gandalf.csv` (Excel vs image), `stimulus_catalog_gandalf.pdf`.
+Build: `scripts/01b_build_stimulus_images.py --overwrite`; check: `scripts/01d_check_stimuli_against_catalog.py`.
+Blank conditions of the contrast/letters sessions are now in the library too (Excel lists them).
+Migration checks: `check_library_migration.py` (pixel identity, uniqueness, coverage, stimulus_id changes);
+determinism (rebuild twice → byte-identical); repo tests (`tests/test_stimulus_library.py` new,
+`tests/test_contrast_letters.py` updated); dashboard smoke test (`schira_dashboard/test_dashboard_app.py`).
+Encoding-pair manifests (7 windows) updated: image_path → library, corrected text/colour/size, + 24/07 condAN7 rows;
+backup in `Data/VSD_Encoder_01/encoding_pairs/_backup_before_library_2026-11-16/`.
+Old per-session `images/` folder still in place (950 experiment parquet files point to it).

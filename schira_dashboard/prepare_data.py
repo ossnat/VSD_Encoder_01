@@ -85,7 +85,9 @@ def manual_landmarks(sessions: list[str]) -> list[dict]:
                                  pair_id="", quality=np.nan, note="day-level points (session within 20/11/18 not recorded)"))
     # opt-points-10-07-18.xlsx: ((stim col, stim row), (cam col, cam row)), 1-based
     pts = [((21, 26), (44, 39)), ((14, 14), (21, 36)), ((14, 38), (60, 30)), ((35, 26), (47, 45)), ((21, 14), (25, 41)),
-           ((21, 37), (58, 36)), ((21, 9), (24, 46)), ((21, 43), (70, 36)), ((4, 26), (37, 24)), ((38, 26), (48, 51))]
+           ((21, 37), (58, 36)), ((21, 9), (24, 46)), ((21, 43), (70, 36)), ((4, 26), (37, 24)), ((38, 26), (51, 48))]
+    # last point (horizontal-bar right): the xlsx has (48, 51); Joanna's .mat files and thesis Fig. 11B have x/y the other
+    # way round (registration_revised/README.md)
     for s in [s for s in sessions if s.startswith("100718")]:
         for i, (st, cm) in enumerate(pts):
             rows.append(dict(session=s, condition="", source="manual", label=f"Joanna 100718 #{i+1}",
@@ -131,13 +133,20 @@ def main() -> None:
                                    cam_row=pk[0], cam_col=pk[1], pair_id=f"{s}|{c}", quality=pk[2] / sd, note="end order unknown"))
         print(f"{s}: {len(R)} conditions", flush=True)
 
+    # blank trials (session_<s>_blank.h5, made by scripts/extract_blank_trials_h5.py from the raw condsAN .mat 'blankAN'):
+    # same window - baseline map, key '<session>|blank'; no catalog row, no landmarks
+    for h5 in sorted((DATA / f"FoundationData/ProcessedData/{monkey}").glob("session_*_blank.h5")):
+        s = h5.stem[len("session_"):-len("_blank")]
+        R = response_maps(h5)
+        for c, r in R.items():
+            maps[f"{s}|blank"] = r
+        print(f"{s}: blank trials ({', '.join(R)})", flush=True)
+
     lm += manual_landmarks(sessions)
     HERE.joinpath("cache").mkdir(exist_ok=True)
     np.savez_compressed(HERE / f"cache/{monkey}_maps.npz", **maps)
     cat.to_csv(HERE / f"cache/{monkey}_catalog.csv", index=False)
     L = pd.DataFrame(lm); L.to_csv(HERE / f"cache/{monkey}_landmarks.csv", index=False)
-    from add_size_variants import add_variants      # radius renderings for stimuli labelled 'radius'
-    add_variants(monkey)
     print(f"wrote {len(maps)} maps, {len(cat)} catalog rows, {len(L)} landmarks "
           f"({(L.source == 'auto').sum()} auto, {(L.source == 'manual').sum()} manual)")
 

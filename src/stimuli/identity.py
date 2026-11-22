@@ -66,3 +66,48 @@ def attach_stimulus_ids(df: pd.DataFrame) -> pd.DataFrame:
             out.loc[bar_mask, "size_deg"] = CANONICAL_BAR_LENGTH_DEG
     out["stimulus_id"] = out.apply(stimulus_id_from_row, axis=1)
     return out
+
+
+def _num(v: Any) -> str:
+    """Compact, stable number formatting for uids (0.6 -> '0.6', 1.0 -> '1', -0.75 -> '-0.75')."""
+    return format_size_deg(v)
+
+
+def _rgb_of(row: Any) -> tuple[int, int, int] | None:
+    get = row.get if hasattr(row, "get") else (lambda k, d=None: d)
+    rgb = get("rgb", None)
+    if rgb is None or (isinstance(rgb, float) and np.isnan(rgb)):
+        return None
+    vals = [int(x) for x in list(rgb)]
+    return (vals[0], vals[1], vals[2])
+
+
+def stimulus_uid_from_row(row: Any, default_background: int = 128) -> str:
+    """Exact image identity: one uid per distinct stimulus image in the stimulus library.
+
+    Unlike ``stimulus_id`` (shape family, used to group leave-one-out folds), the uid includes everything that
+    changes the pixels: shape, colour or RGB, size (diameter; bar length), position and background grey.
+    Examples::
+
+        triangle_contour__black__d0.8__x0.6_y-0.75__bg128
+        filled_circle__rgb158__d0.3__x0.6_y-0.75__bg186
+        bar_vertical__black__len1__x0.6_y-0.75__bg128
+        letter_D__x1_y-0.9__bg128
+        blank__bg128
+    """
+    get = row.get if hasattr(row, "get") else (lambda k, d=None: d)
+    bg_raw = get("background_gray", None)
+    bg = default_background if bg_raw is None or (isinstance(bg_raw, float) and np.isnan(bg_raw)) else int(bg_raw)
+    shape = str(get("shape_type", "") or "")
+    if not shape or shape == "blank" or bool(get("is_blank", False)):
+        return f"blank__bg{bg}"
+    pos = f"x{_num(get('pos_x_deg'))}_y{_num(get('pos_y_deg'))}"
+    if shape == "letter":
+        letter = str(get("letter", "") or "?").upper()
+        return f"letter_{letter}__{pos}__bg{bg}"
+    rgb = _rgb_of(row)
+    colour = f"rgb{rgb[0]}" if rgb is not None and rgb[0] == rgb[1] == rgb[2] else (
+        f"rgb{rgb[0]}-{rgb[1]}-{rgb[2]}" if rgb is not None else str(get("color", "unknown") or "unknown"))
+    size = get("size_deg", None)
+    size_tag = f"len{_num(size)}" if shape in BAR_SHAPE_TYPES else f"d{_num(size)}"
+    return f"{shape}__{colour}__{size_tag}__{pos}__bg{bg}"

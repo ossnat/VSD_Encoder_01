@@ -17,6 +17,24 @@ def _feature_shape_str(shape: tuple[int, ...]) -> str:
     return "(" + ", ".join(str(int(x)) for x in shape) + ")"
 
 
+def plan_stimulus_extraction(manifest: pd.DataFrame, map_path_fn) -> tuple[pd.DataFrame, dict]:
+    """Split the (session, condition) rows into rows to extract (first row per output file) and aliases.
+
+    Returns (primary_rows, aliases) where aliases maps an output path to the list of extra rows that share it.
+    Pure function (no torch) so the de-duplication can be tested anywhere.
+    """
+    rows = manifest.drop_duplicates(["h5_session", "condition"], keep="first").sort_values(["h5_session", "condition_num"])
+    primary_idx, aliases, seen = [], {}, {}
+    for idx, row in zip(rows.index, rows.itertuples(index=False)):
+        path = Path(map_path_fn(str(row.h5_session), str(row.condition)))
+        if path in seen:
+            aliases.setdefault(path, []).append(idx)
+        else:
+            seen[path] = idx
+            primary_idx.append(idx)
+    return rows.loc[primary_idx], {p: rows.loc[ix] for p, ix in aliases.items()}
+
+
 def extract_stimulus_features(
     model: torch.nn.Module,
     manifest: pd.DataFrame,
@@ -69,9 +87,8 @@ def extract_stimulus_features(
         pending_tensors = []
         pending_meta = []
 
-    stimulus_rows = manifest.drop_duplicates(
-        ["h5_session", "condition"], keep="first"
-    ).sort_values(["h5_session", "condition_num"])
+    # One forward pass per output file: conditions that show the same stimulus share one feature map.
+    stimulus_rows, alias_rows = plan_stimulus_extraction(manifest, map_path_fn)
 
     for row in stimulus_rows.itertuples(index=False):
         map_abs = Path(
@@ -93,6 +110,7 @@ def extract_stimulus_features(
             "shape_type": row.shape_type,
             "color": row.color,
             "is_blank": bool(row.is_blank),
+            "stimulus_uid": getattr(row, "stimulus_uid", None),
         }
         if map_abs.exists() and not overwrite:
             n_skipped += 1
@@ -128,6 +146,19 @@ def extract_stimulus_features(
             flush_batch()
 
     flush_batch()
+    # Alias rows: same feature file and shape as their primary row, own session / condition.
+    by_path = {r["feature_path"]: r for r in rows}
+    ws = repo_root.resolve().parent
+    for path, extra in alias_rows.items():
+        try:
+            fp = str(Path(path).resolve().relative_to(ws))
+        except ValueError:
+            fp = str(Path(path).resolve())
+        for row in extra.itertuples(index=False):
+            r = dict(by_path[fp])
+            r.update(h5_session=row.h5_session, condition=row.condition, condition_num=int(row.condition_num),
+                     image_path=row.image_path, stimulus_text=row.stimulus_text, is_blank=bool(row.is_blank))
+            rows.append(r)
     out_df = (
         pd.DataFrame(rows)
         .sort_values(["h5_session", "condition_num"])

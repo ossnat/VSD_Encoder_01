@@ -95,16 +95,18 @@ def test_parse_contrast_and_letters(tmp_path: Path):
         ]
     )
     specs = parse_contrast_letters_rows(df, monkey="gandalf", letters_root=letters)
-    # 6 contrast (skip blank+error) + 6 letters on 201118a; control-attention skipped.
-    assert len(specs) == 12
+    # 6 contrast + 1 blank, 6 letters + 1 blank on 201118a; error skipped; control-attention skipped.
+    assert len(specs) == 14
+    assert sum(s.is_blank for s in specs) == 2
 
-    contrast = [s for s in specs if s.h5_session == "230518b"]
+    contrast = [s for s in specs if s.h5_session == "230518b" and not s.is_blank]
     assert len(contrast) == 6
     assert contrast[0].rgb == (249, 249, 249)
     assert contrast[0].pos_x_deg == pytest.approx(0.6)
     assert contrast[0].pos_y_deg == pytest.approx(-0.75)
     assert contrast[0].size_deg == pytest.approx(0.8)  # r=0.4 → diameter
-    assert contrast[0].background_gray == 128
+    # Excel 'Blank (186)' is the screen background of this session (decision 15/11/2026).
+    assert contrast[0].background_gray == 186
     assert {s.condition for s in contrast} == {
         "condAN1",
         "condAN2",
@@ -115,14 +117,14 @@ def test_parse_contrast_and_letters(tmp_path: Path):
     }
     assert all(s.rgb is not None and s.rgb[0] >= 186 for s in contrast)
 
-    letters_specs = [s for s in specs if s.h5_session == "201118a"]
+    letters_specs = [s for s in specs if s.h5_session == "201118a" and not s.is_blank]
     assert len(letters_specs) == 6
     assert {s.letter for s in letters_specs} == set("GANDFL")
 
     image = render_stimulus(contrast[0], RenderConfig())
     assert image.shape == (210, 210, 3)
     assert image.dtype == np.uint8
-    # Canonical background gray 128 (session blank 186 used only for polarity).
-    assert image[0, 0, 0] == 128
+    # Background = the session's Excel blank value.
+    assert image[0, 0, 0] == 186
     # Target pixel near expected location should be near 249.
     assert (image == 249).any()

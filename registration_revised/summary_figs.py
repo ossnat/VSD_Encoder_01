@@ -7,7 +7,7 @@
                                       Joanna's model prediction (cyan) on the 100718b response map, with the error
 
 Joanna's procedure (legacy Code/: leftHem_trans_opt.m, find_optimization_pts.m, calc_rmsd.m, mean_rmsd.m), re-run
-with the Python port of trans_cortex (shira_revised/src/legacy_trans_cortex.py):
+with the Python port of trans_cortex (src/legacy_joanna/legacy_trans_cortex.py):
   1. trans_cortex on the 301 x 512 canvas with her retino_mat grid -> cortical coords (xcoord, ycoord) per canvas pixel
   2. 2 anchor points: stimulus pixel -> (xcoord, ycoord); camera point (col, 101 - row) [low hemifield flip];
      exact 2-point 'nonreflectivesimilarity' (shift, rotation, scale)
@@ -40,9 +40,9 @@ REPO = HERE.parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(REPO))
 import points                                     # noqa: E402
 import make_figs as MF                            # noqa: E402
-from shira_revised.src.legacy_trans_cortex import m1_m2_from_retino_mat, trans_cortex   # noqa: E402
-from shira_revised.src.legacy_warp import load_retino_mat_crop                          # noqa: E402
-from shira_revised.src.legacy_schira import LegacySchiraParams                          # noqa: E402
+from src.legacy_joanna.legacy_trans_cortex import m1_m2_from_retino_mat, trans_cortex   # noqa: E402
+from src.legacy_joanna.legacy_warp import load_retino_mat_crop                          # noqa: E402
+from src.legacy_joanna.legacy_schira import LegacySchiraParams                          # noqa: E402
 
 WINNER = dict(a=0.74, alpha=1.0, k=1.0)
 WINNER_FILE = MF.LEG / "VSDI points/100718/opt_points_25_09_23_23_01.mat"

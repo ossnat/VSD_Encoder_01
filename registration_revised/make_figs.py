@@ -47,7 +47,7 @@ FIGS = HERE / "figs"
 SESSIONS = ("100718a", "100718b")
 MAPS = REPO / "schira_dashboard/cache/gandalf_maps.npz"          # mean(frames 35-46) - mean(frames 5-25), per condition
 CATALOG = REPO / "schira_dashboard/cache/gandalf_catalog.csv"
-THESIS_PAGE = REPO / "shira_revised/artifacts/thesis_fig12/thesis_page_029.png"   # thesis page 28 (Figs. 10-11)
+THESIS_PAGE = REPO / "schira_dashboard/stimuli/thesis_pages/thesis_page_029.png"   # thesis page 28 (Figs. 10-11)
 FIG11B = (630, 605, 389)                                          # x0, y0, size of the Fig. 11B plate on that page
 READINGS = {
     "top-left":           lambda x, y: (y - 1, x - 1),

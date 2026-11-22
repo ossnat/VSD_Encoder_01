@@ -3,7 +3,7 @@
   cartesian_grid_0-3deg.png, polar_grid_0-3deg.png
       Joanna's grids as dashboard shapes: 210 x 210 canvas (6 deg at 35 px/deg, fixation top-left), grey 130,
       white (255) lines, 0-3 deg. Pixel-identical to the 0-3 deg corner of create_cart_stim.m / create_polar_stim.m
-      (ports in shira_revised/src/legacy_stimuli.py; the Cartesian port was 1 px off before Nov 17 2026). Not shown to
+      (ports in src/legacy_joanna/legacy_stimuli.py; the Cartesian port was 1 px off before Nov 17 2026). Not shown to
       the monkey -> kept out of the stimulus library on purpose.
   grids.csv                        uid, label, shape_type, image (read by schira_dash_app.py)
   thesis_<kind>_<date>.png         the chamber plate of thesis Fig. 12 (page 29; kind polar = A, cart = B;
@@ -12,7 +12,7 @@
                                    Joanna's BV_resized.png of that day (normalised cross-correlation, grid lines masked)
   joanna_<kind>_<date>.png         Joanna's prediction re-run with her own pipeline: full 301 x 512 MATLAB grid,
                                    trans_cortex with the retino_mat degree grid, her session parameters and 2-point
-                                   registration (shira_revised/configs/gandalf_legacy.yaml) -> 100 x 100 camera frame
+                                   registration (src/legacy_joanna/configs/gandalf_legacy.yaml) -> 100 x 100 camera frame
   bv_<date>.png                    Joanna's BV_resized.png (chamber blood-vessel image, camera frame)
   check_thesis_fig12.png           QC: thesis lines vs the re-run, both in the camera frame
 
@@ -32,15 +32,15 @@ from scipy.ndimage import affine_transform, gaussian_filter, median_filter
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
 sys.path.insert(0, str(REPO))
-from shira_revised.src.legacy_stimuli import create_cart_stim, create_polar_stim          # noqa: E402
-from shira_revised.src.legacy_schira import LegacySchiraParams                             # noqa: E402
-from shira_revised.src.legacy_trans_cortex import m1_m2_from_retino_mat                   # noqa: E402
-from shira_revised.src.legacy_warp import load_retino_mat_crop                             # noqa: E402
-from shira_revised.src.legacy_registration import trans_and_register                      # noqa: E402
+from src.legacy_joanna.legacy_stimuli import create_cart_stim, create_polar_stim          # noqa: E402
+from src.legacy_joanna.legacy_schira import LegacySchiraParams                             # noqa: E402
+from src.legacy_joanna.legacy_trans_cortex import m1_m2_from_retino_mat                   # noqa: E402
+from src.legacy_joanna.legacy_warp import load_retino_mat_crop                             # noqa: E402
+from src.legacy_joanna.legacy_registration import trans_and_register                      # noqa: E402
 
 OUT = HERE / "stimuli/thesis_fig12"
 LEG = REPO.parent / "legacy_code/Retinotopic model Joanna/Gandalf"
-PAGE = REPO / "shira_revised/artifacts/thesis_fig12/thesis_page_030.png"     # thesis page 29 (Fig. 12), 144 dpi
+PAGE = REPO / "schira_dashboard/stimuli/thesis_pages/thesis_page_030.png"     # thesis page 29 (Fig. 12), 144 dpi
 PLATES = {("polar", "201118"): (523, 613), ("polar", "100718"): (790, 613),   # top-left (x, y) of the 214 px plates
           ("cart", "201118"): (523, 899), ("cart", "100718"): (790, 899)}
 PLATE = 214
@@ -101,7 +101,7 @@ def main() -> None:
         rows.append(dict(uid=uid, label=label, shape_type=stype, image=fname, kind=kind))
     pd.DataFrame(rows).to_csv(OUT / "grids.csv", index=False)
 
-    cfg = yaml.safe_load((REPO / "shira_revised/configs/gandalf_legacy.yaml").read_text())
+    cfg = yaml.safe_load((REPO / "src/legacy_joanna/configs/gandalf_legacy.yaml").read_text())
     page = np.asarray(Image.open(PAGE).convert("L"))
     reg = {}
     for date in ("201118", "100718"):

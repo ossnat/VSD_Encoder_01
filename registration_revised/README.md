@@ -1,5 +1,20 @@
 # registration_revised
 
+## The Schira mapping used everywhere (stimulus pixel → camera pixel)
+
+1. **Pixels to degrees** (true 35 px/°, fixation at the canvas corner): x = col / 35, y = −row / 35
+2. **Horizontal stretch r**: (x′, y′) = (r·x, y), i.e. `[[r, 0], [0, 1]]`
+3. **Polar**: E = √(x′² + y′²), θ = atan2(y′, x′)
+4. **Schira 2007 monopole with shear** (thesis α, P = θ/α; k = 1):
+   f_a = sech(P)^(S₂·sech(S₁·log(E/a))), S₁ = 0.76, S₂ = 0.1821; z = E·exp(i·P·f_a); w = k·log(z + a)
+5. **Registration through Joanna's two anchors A, B** (exact similarity, no free parameters):
+   ĉ = c_A + (c_B − c_A)/(w_B − w_A)·(w − w_A)
+
+Joint fit (10/07/18 thesis set + 20/11/18): **a 1.43, α 1.50, r 0.539**. Code: `fit_stretch.predict` →
+`schira_dashboard/schira_geometry.py` → `src/retinotopy/schira.py::forward_schira`; the dashboard's "Our joint fit"
+model and the encoding LUT use the same chain. `tests/test_schira_five_steps.py` checks it step by step and against
+Joanna's MATLAB port (`src/legacy_joanna/legacy_schira.py`).
+
 A check of Joanna's 10/07/18 registration points (`legacy_code/.../Gandalf/VSDI points/100718/opt-points-10-07-18.xlsx`)
 against the stimuli, the VSD maps and thesis Fig. 11B.
 

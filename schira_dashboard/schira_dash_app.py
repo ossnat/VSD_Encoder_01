@@ -498,7 +498,7 @@ if is_grid:
                    "line, and back (inside the chamber circle). Each distance is capped at 6 px, and lines are not matched by "
                    "identity. Joanna's pipeline converts stimulus pixels to degrees with her retino_mat grid "
                    "(about 84 px/° horizontally and 45 px/° vertically). The dashboard uses 35 px/°, so the same a and α "
-                   "give a different map (see shira_revised/schira_audit/README.md). The thesis plate is registered "
+                   "give a different map (see docs/schira_history/schira_audit.md). The thesis plate is registered "
                    "onto BV_resized.png by its blood vessels (schira_dashboard/make_thesis_fig12.py).")
 
 # ---------------------------------------------------------------- same shape on every VSD it was shown in

@@ -120,7 +120,7 @@ def render_cartesian_degree_grid(
 ) -> tuple[np.ndarray, dict]:
     """Gray quadrant with horizontal + vertical lines every ``spacing_deg``.
 
-    Distinct from ``experiments/retinotopic_map/render_grid_stimulus.py``,
+    Distinct from the removed ``experiments/retinotopic_map`` grid probe,
     which places five equal-gap lines (not 0.5° spacing).
     """
     cfg = cfg or RenderConfig()

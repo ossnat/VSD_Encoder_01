@@ -67,9 +67,9 @@ def xlsx_points(tables=("right",)):
 def predict(stim, cam, anchors, a, alpha, r, k=1.0):
     """Predicted camera points (complex col + i row, 0-based) for every point."""
     G.set_pixel_grid("35ppd")
-    x = np.array([c for _, c in stim]) / G.PPD * r
+    x = np.array([c for _, c in stim]) / G.PPD
     y = -np.array([rw for rw, _ in stim]) / G.PPD
-    w = G.schira_w(x, y, a, alpha, k, "thesis")
+    w = G.schira_w(x, y, a, alpha, k, "thesis", r=r)       # stretch r applied once, inside (not the dashboard's global r)
     ia = [stim.index(p) for p in anchors]
     cam_c = np.array([(c - 1) + 1j * (rw - 1) for rw, c in cam])
     wv = np.conj(w) if MIRROR else w

@@ -118,6 +118,35 @@ def _stimuli_yaml() -> dict:
         return yaml.safe_load(f) or {}
 
 
+# Copied from the removed experiments/schira2007/run_schira_only.py (tag pre-cleanup-2026-11).
+def _render_config(stimuli_cfg: dict, *, canvas_size: int | None = None) -> RenderConfig:
+    base_canvas = int(stimuli_cfg.get("canvas_size", 210))
+    canvas = int(canvas_size) if canvas_size is not None else base_canvas
+    quadrant_extent_deg = float(stimuli_cfg.get("quadrant_extent_deg", 6.0))
+    # Keep degrees/pixel consistent with the base catalog canvas.
+    base_ppd = stimuli_cfg.get("pixels_per_deg")
+    if base_ppd is None:
+        base_ppd = base_canvas / quadrant_extent_deg
+    pixels_per_deg = float(base_ppd) * (canvas / base_canvas)
+    return RenderConfig(
+        canvas_size=canvas,
+        pixels_per_deg=pixels_per_deg,
+        quadrant_extent_deg=quadrant_extent_deg,
+        background_gray=int(stimuli_cfg.get("background_gray", 128)),
+        bar_length_deg=float(stimuli_cfg.get("bar_length_deg", 1.0)),
+        bar_width_px=max(
+            1, int(round(int(stimuli_cfg.get("bar_width_px", 1)) * canvas / base_canvas))
+        ),
+        contour_width_px=max(
+            1,
+            int(round(int(stimuli_cfg.get("contour_width_px", 1)) * canvas / base_canvas)),
+        ),
+        assume_size_is_diameter=bool(stimuli_cfg.get("assume_size_is_diameter", True)),
+        draw_fixation=bool(stimuli_cfg.get("draw_fixation", False)),
+        letter_box_deg=float(stimuli_cfg.get("letter_box_deg", 1.0)),
+    )
+
+
 def _load_201118_params():
     path = project_root() / "configs" / "schira" / "sets.yaml"
     name, params, _affine, block = load_schira_set(path, set_name=SCHIRA_SET)
@@ -126,8 +155,6 @@ def _load_201118_params():
 
 
 def _canonical_render_cfg() -> RenderConfig:
-    from experiments.schira2007.run_schira_only import _render_config
-
     return _render_config(_stimuli_yaml(), canvas_size=CANONICAL_CANVAS)
 
 
@@ -179,8 +206,6 @@ def test_schira_config_and_render_use_35px_per_degree():
     assert schira_cfg.letter_box_deg == pytest.approx(LETTER_BOX_DEG)
 
     # 3× YAML canvas (210→630) keeps 1° = 35×3 = 105 px. 672 was 224×3 (old 37.33 px/deg).
-    from experiments.schira2007.run_schira_only import _render_config
-
     assert upsample_render_canvas(CANONICAL_CANVAS) == UPSAMPLED_CANVAS
     hi = _render_config(yaml_cfg, canvas_size=None)
     # _render_config(None) stays at YAML canvas; run_schira_only applies 3×.

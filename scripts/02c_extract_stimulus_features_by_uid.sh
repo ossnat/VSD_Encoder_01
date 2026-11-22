@@ -4,7 +4,7 @@
 # The old per-session maps (maps/<session>__<condition>.npy) are left untouched.
 #
 # Usage (repo root, macOS project venv):   bash scripts/02c_extract_stimulus_features_by_uid.sh [--device mps|cpu|cuda]
-# Afterwards (any machine):                scripts/py shira_revised/stimulus_audit/check_uid_features.py
+# Afterwards (any machine):                scripts/py tools/stimulus_audit/check_uid_features.py
 set -euo pipefail
 cd "$(dirname "$0")/.."
 DEVICE="${2:-auto}"; [[ "${1:-}" == "--device" ]] || DEVICE="auto"

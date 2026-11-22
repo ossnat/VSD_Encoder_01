@@ -11,7 +11,7 @@ scripts/py -m pip install streamlit                         # once
 scripts/py schira_dashboard/prepare_data.py                 # once: builds schira_dashboard/cache/ (~1 min)
 scripts/py -m streamlit run schira_dashboard/schira_dash_app.py
 ```
-A browser tab opens. Tests: `cd schira_dashboard && ../scripts/py test_schira_geometry.py`.
+A browser tab opens. Tests: `scripts/py -m pytest tests/test_dashboard_geometry.py tests/test_dashboard_app.py tests/test_schira_five_steps.py`.
 
 ## Files
 
@@ -20,7 +20,9 @@ A browser tab opens. Tests: `cd schira_dashboard && ../scripts/py test_schira_ge
 | `prepare_data.py` | response maps (frames 35–46 minus 5–25), stimulus catalog, landmark table → `cache/` |
 | `schira_geometry.py` | Schira (repo `src/retinotopy/schira.py`), registration fits, nested optimiser, stimulus ink mapping |
 | `schira_dash_app.py` | the Streamlit dashboard |
-| `test_schira_geometry.py` | checks (k invariance, conventions, reproduces the earlier 20/11/18 fit of 7.9 px) |
+| `make_thesis_fig12.py`, `thesis_fig12.py` | Joanna's grids and the thesis Fig. 12 comparison (uses `src/legacy_joanna/`) |
+| `stimuli/thesis_pages/` | thesis pages 28 and 29 at 144 dpi (Figs. 10–12), inputs of `make_thesis_fig12.py` and `registration_revised/make_figs.py` |
+| `tests/test_dashboard_geometry.py`, `tests/test_dashboard_app.py` (repo `tests/`) | geometry checks and the headless app smoke test |
 | `figures/` | figures saved from the dashboard |
 
 ## Conventions
@@ -94,7 +96,7 @@ A browser tab opens. Tests: `cd schira_dashboard && ../scripts/py test_schira_ge
   session's registration), all three overlaid, and their distances to the thesis lines. "Use Joanna's values" copies her
   a, α (converted to the current convention) and k into the sidebar.
 - Her pipeline reads stimulus pixels at about 84 px/° horizontally and 45 px/° vertically (`retino_mat`), the dashboard at
-  35 px/°, so the same a and α do not give the same map (`shira_revised/schira_audit/README.md`).
+  35 px/°, so the same a and α do not give the same map (`docs/schira_history/schira_audit.md`).
 - **Background to draw the grid on**: the thesis Fig. 12 plate itself (A plate for the polar grid, B plate for the
   Cartesian grid; one entry per session of that day, whose landmarks register the grid), blank-trial recordings, or any
   stimulus recording. Blank trials come from `session_<s>_blank.h5` (made by `scripts/extract_blank_trials_h5.py` from the

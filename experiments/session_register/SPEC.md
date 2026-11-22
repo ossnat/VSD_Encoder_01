@@ -1,5 +1,7 @@
 # Session camera registration (vasculature) — implementation spec
 
+> 2026-11-22: the Schira camera is now `src/retinotopy/revised.py` (`configs/schira/revised.yaml`); `CorticalAffine`, `src/retinotopy/register.py` and `configs/schira/sets.yaml` below were removed (tag `pre-cleanup-2026-11`).
+
 **Status:** spec only. Do **not** mix this with Schira landmark fitting (`src/retinotopy/register.py`, `CorticalAffine`).
 
 **Goal:** Within one monkey, register a **new session’s VSD camera** onto an **anchor session** (first: Gandalf `100718a`) using **blood vessels**. Then every later stimulus on the new day can reuse the **same Schira + 100718 camera YAML**; only this extra 2D warp changes.

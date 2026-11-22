@@ -7,8 +7,8 @@
 # Session→anchor registration stays on its own vessel window (also raw).
 
 monkey: gandalf
-schira_config: configs/schira/sets.yaml
-schira_set: "100718"
+schira_config: configs/schira/revised.yaml
+schira_set: "revised_100718"
 anchor_session: "100718a"
 
 spatial_size: [100, 100]

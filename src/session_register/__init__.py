@@ -3,11 +3,10 @@
 A **new session** (moving) is a different 2D camera pose of the same cortex
 as an **anchor session** (fixed, first: Gandalf ``100718a``). This package
 fits a rigid warp from moving pixels onto the anchor grid so later code can
-reuse the anchor Schira + ``CorticalAffine``.
+reuse the anchor session's Schira camera (``src.retinotopy.revised``, 2-anchor registration).
 
-Do **not** mix this with landmark Schira fitting in ``src.retinotopy.register``.
-Composition with Schira is a later step: moving pixel → ``T`` → anchor pixel
-→ ``CorticalAffine.pixel_to_w``.
+Do **not** mix this with the landmark (2-anchor) Schira registration. Composition: moving pixel → ``T`` →
+anchor pixel → ``RevisedGeometry.cam_to_w`` (the encoding LUT is built on the anchor grid).
 
 Pipeline usage (quiet, skip-existing ``transform.yaml``, no QC figures)::
 

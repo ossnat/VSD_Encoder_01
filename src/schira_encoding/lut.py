@@ -1,10 +1,10 @@
 """Static VSD→visual-field lookup table on the anchor camera grid.
 
-For each anchor VSD pixel ``(row, col)``::
+For each anchor VSD pixel ``(row, col)`` the revised mapping (``src/retinotopy/revised.py``) is run backwards::
 
-    (c, r) --CorticalAffine.pixel_to_w--> w
-         --inverse_schira--> (E, θ) --> (x_deg, y_deg)
-         --cartesian_deg_to_image_px--> stimulus (x_px, y_px)
+    (row, col) --inverse 2-anchor similarity--> w
+               --inverse Schira (thesis alpha)--> (x', y) --x = x'/r--> (x_deg, y_deg)
+               --cartesian_deg_to_image_px--> stimulus (x_px, y_px)
 
 CNN feature sampling scales those stimulus coordinates into the feature
 grid at warp time (``input_size`` / layer spatial size), so one LUT serves
@@ -19,10 +19,8 @@ from typing import Any
 
 import numpy as np
 
-from src.retinotopy.affine import CorticalAffine
-from src.retinotopy.schira import SchiraParams, inverse_schira, polar_to_cartesian
+from src.retinotopy.revised import RevisedGeometry
 from src.retinotopy.visual_field import cartesian_deg_to_image_px
-from src.retinotopy.warp import cortical_w_grid
 from src.stimuli.render import RenderConfig
 
 
@@ -149,26 +147,25 @@ class SchiraLUT:
 
 def build_schira_lut(
     *,
-    params: SchiraParams,
-    affine: CorticalAffine,
-    schira_set: str,
+    geometry: RevisedGeometry,
     anchor_session: str,
     spatial_size: tuple[int, int] = (100, 100),
     render_cfg: RenderConfig | None = None,
     input_size: int = 224,
     max_ecc_deg: float | None = None,
 ) -> SchiraLUT:
-    """Build an anchor-grid LUT from Schira params + camera affine."""
+    """Build an anchor-grid LUT from the revised geometry (stretch r, Schira, 2-anchor camera)."""
     cfg = render_cfg or RenderConfig()
     height, width = int(spatial_size[0]), int(spatial_size[1])
-    w = cortical_w_grid((height, width), affine, params)
-    ecc, polar = inverse_schira(w, params, min_real_z=0.0)
-    x_deg, y_deg = polar_to_cartesian(ecc, polar)
+    rows, cols = np.meshgrid(np.arange(height, dtype=np.float64), np.arange(width, dtype=np.float64), indexing="ij")
+    w = geometry.cam_to_w(rows, cols)
+    x_deg, y_deg = geometry.w_to_deg(w)
+    ecc = np.hypot(x_deg, y_deg)
     stim_col, stim_row = cartesian_deg_to_image_px(x_deg, y_deg, cfg)
     # cartesian_deg_to_image_px returns (x_px, y_px) = (col, row).
 
     canvas = int(cfg.canvas_size)
-    ecc_ok = np.isfinite(ecc) & np.isfinite(polar)
+    ecc_ok = np.isfinite(ecc)
     if max_ecc_deg is not None:
         ecc_ok &= ecc <= float(max_ecc_deg)
     valid = (
@@ -194,7 +191,7 @@ def build_schira_lut(
         input_size=int(input_size),
         pixels_per_deg=float(cfg.pixels_per_deg),
         quadrant_extent_deg=float(cfg.quadrant_extent_deg),
-        schira_set=str(schira_set),
+        schira_set=str(geometry.name),
         anchor_session=str(anchor_session),
         valid=valid,
         u=u,

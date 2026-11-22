@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.retinotopy.affine import CorticalAffine
-from src.retinotopy.schira import SchiraParams
+from src.retinotopy.revised import load_revised_geometry
+from src.paths import project_root
 from src.schira_encoding.global_channel_model import (
     fit_global_channel_ridge,
     predict_global_channel_ridge,
@@ -17,36 +17,15 @@ from src.schira_encoding.warp_features import warp_feature_map, warp_stimulus_rg
 from src.stimuli.render import RenderConfig
 
 
-def _toy_params() -> SchiraParams:
-    return SchiraParams(
-        a=0.74,
-        alpha=1.0,
-        k=1.0,
-        shear="double_sech",
-        fa_combine="power",
-        sech_ecc_k=0.76,
-        sech_amp=0.1821,
-    )
-
-
-def _toy_affine() -> CorticalAffine:
-    return CorticalAffine(
-        origin_x=20.0,
-        origin_y=20.0,
-        pixels_per_unit=10.0,
-        rotation_deg=0.0,
-        flip_u=False,
-        flip_v=False,
-        needs_confirmation=True,
-    )
+def _geometry(set_name: str = "revised_100718"):
+    """The real revised geometry (configs/schira/revised.yaml)."""
+    return load_revised_geometry(project_root() / "configs/schira/revised.yaml", set_name)
 
 
 def test_build_lut_roundtrip(tmp_path):
     cfg = RenderConfig(canvas_size=210, pixels_per_deg=35.0, quadrant_extent_deg=6.0)
     lut = build_schira_lut(
-        params=_toy_params(),
-        affine=_toy_affine(),
-        schira_set="100718",
+        geometry=_geometry(),
         anchor_session="100718a",
         spatial_size=(32, 32),
         render_cfg=cfg,
@@ -59,7 +38,7 @@ def test_build_lut_roundtrip(tmp_path):
     path = tmp_path / "lut.npz"
     lut.save(path)
     loaded = SchiraLUT.load(path)
-    assert loaded.schira_set == "100718"
+    assert loaded.schira_set == "revised_100718"
     assert loaded.anchor_session == "100718a"
     np.testing.assert_array_equal(loaded.valid, lut.valid)
     np.testing.assert_allclose(loaded.stim_row[lut.valid], lut.stim_row[lut.valid])
@@ -68,9 +47,7 @@ def test_build_lut_roundtrip(tmp_path):
 def test_feature_coords_scale_with_map_size():
     cfg = RenderConfig(canvas_size=210, pixels_per_deg=35.0)
     lut = build_schira_lut(
-        params=_toy_params(),
-        affine=_toy_affine(),
-        schira_set="100718",
+        geometry=_geometry(),
         anchor_session="100718a",
         spatial_size=(16, 16),
         render_cfg=cfg,
@@ -86,15 +63,13 @@ def test_feature_coords_scale_with_map_size():
 def test_warp_feature_map_constant_channels():
     cfg = RenderConfig(canvas_size=210, pixels_per_deg=35.0, quadrant_extent_deg=6.0)
     lut = build_schira_lut(
-        params=_toy_params(),
-        affine=_toy_affine(),
-        schira_set="toy",
+        geometry=_geometry(),
         anchor_session="toy_a",
         spatial_size=(40, 40),
         render_cfg=cfg,
         input_size=224,
     )
-    assert lut.valid.any(), "toy affine produced empty LUT.valid"
+    assert lut.valid.any(), "revised geometry produced empty LUT.valid"
     feat = np.zeros((4, 28, 28), dtype=np.float32)
     for c in range(4):
         feat[c] = float(c + 1)
@@ -117,9 +92,7 @@ def test_warp_feature_map_constant_channels():
 def test_warp_stimulus_rgb_matches_canvas():
     cfg = RenderConfig(canvas_size=210, pixels_per_deg=35.0, quadrant_extent_deg=6.0)
     lut = build_schira_lut(
-        params=_toy_params(),
-        affine=_toy_affine(),
-        schira_set="toy",
+        geometry=_geometry(),
         anchor_session="toy_a",
         spatial_size=(40, 40),
         render_cfg=cfg,
@@ -128,10 +101,11 @@ def test_warp_stimulus_rgb_matches_canvas():
     assert lut.valid.any()
     rgb = np.full((210, 210, 3), 128, dtype=np.uint8)
     # Paint ink at the stimulus location of the first valid VSD pixel.
-    r_i, c_i = np.argwhere(lut.valid)[0]
+    inner = lut.valid & (lut.stim_row > 5) & (lut.stim_col > 5) & (lut.stim_row < 204) & (lut.stim_col < 204)
+    r_i, c_i = np.argwhere(inner)[0]     # away from the canvas edge (map_coordinates pads with the background)
     sr = int(np.clip(np.round(lut.stim_row[r_i, c_i]), 0, 209))
     sc = int(np.clip(np.round(lut.stim_col[r_i, c_i]), 0, 209))
-    rgb[sr, sc] = (255, 0, 0)
+    rgb[max(sr - 1, 0):sr + 2, max(sc - 1, 0):sc + 2] = (255, 0, 0)   # 3x3 so interpolation at sub-pixel coords stays red
     warped, valid = warp_stimulus_rgb(rgb, lut, background_gray=128)
     assert valid[r_i, c_i]
     assert warped[r_i, c_i, 0] > 200

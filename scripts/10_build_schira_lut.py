@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the static Schira LUT on the anchor VSD camera grid."""
+"""Build the static Schira LUT on the anchor VSD camera grid (revised mapping, configs/schira/revised.yaml)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 import yaml
 
 from src.paths import project_root
-from src.retinotopy.params import load_schira_set
+from src.retinotopy.revised import load_revised_geometry
 from src.schira_encoding.io import resolve_output_root
 from src.schira_encoding.lut import SchiraLUT, build_schira_lut
 from src.schira_encoding.schema import lut_path
@@ -53,8 +53,9 @@ def main() -> None:
     stimuli_cfg = _load_yaml(repo / str(cfg.get("stimuli_config", "configs/stimuli/default.yaml")))
     render_cfg = _render_config(stimuli_cfg)
 
-    schira_path = repo / str(cfg.get("schira_config", "configs/schira/sets.yaml"))
-    name, params, affine, _ = load_schira_set(schira_path, set_name=schira_set)
+    schira_path = repo / str(cfg.get("schira_config", "configs/schira/revised.yaml"))
+    geometry = load_revised_geometry(schira_path, schira_set)
+    name = geometry.name
 
     out_root = resolve_output_root(cfg["paths"]["schira_encoding_root"], repo)
     out_path = lut_path(
@@ -74,9 +75,7 @@ def main() -> None:
         return
 
     lut = build_schira_lut(
-        params=params,
-        affine=affine,
-        schira_set=name,
+        geometry=geometry,
         anchor_session=anchor,
         spatial_size=spatial,
         render_cfg=render_cfg,
@@ -86,7 +85,7 @@ def main() -> None:
     lut.save(out_path)
     print(f"Wrote {out_path}")
     print(
-        f"set={name} anchor={anchor} spatial={spatial} "
+        f"set={name} (a {geometry.a}, alpha {geometry.alpha_thesis} thesis, r {geometry.r}) anchor={anchor} spatial={spatial} "
         f"canvas={lut.canvas_size} input={lut.input_size} "
         f"valid={int(lut.valid.sum())}/{lut.valid.size}"
     )

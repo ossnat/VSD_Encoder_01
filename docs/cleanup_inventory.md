@@ -67,7 +67,13 @@ trim them).
 
 About 75 files, ~10k lines of code.
 
-## D. Schira encoding pipeline: switch its geometry to the five-step model (decided 2026-11-22)
+## D. Schira encoding pipeline: switch its geometry to the five-step model (decided and done 2026-11-22)
+
+Done: `src/retinotopy/revised.py` + `configs/schira/revised.yaml` (sets `revised_100718`, `revised_201118`); LUTs rebuilt
+(100718a: 4067 valid camera px, 201118d: 5310). `src/retinotopy/{affine,register,params,plotting,warp}.py`,
+`src/schira_encoding/{geometry_fit,torch_warp}.py`, scripts 22/23/25/26 and the old-geometry tests were removed;
+`tests/test_revised_geometry.py` checks the new LUT against `fit_stretch.predict`. **Not yet done: re-running
+scripts 11 → 17/20 → 18/19/21 on the new LUT.**
 
 Only the **geometry stage** of the encoding is old; the rest is model-independent and stays.
 

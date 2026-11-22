@@ -1,0 +1,37 @@
+# The revised Schira mapping (registration_revised/README.md), used by the encoding LUT.
+#
+#   1. stimulus px -> degrees   x = col/35, y = -row/35 (fixation at the canvas corner; RenderConfig.pixels_per_deg)
+#   2. horizontal stretch       x' = r * x
+#   3. polar                    E, theta
+#   4. Schira 2007              P = theta/alpha (thesis alpha), f_a = sech(P)^(S2 sech(S1 log(E/a))),
+#                               w = k log(E exp(i P f_a) + a)
+#   5. camera                   exact similarity through the day's two anchors (Joanna's winner pairs)
+#
+# Model: joint fit over 10/07/18 (thesis set) + 20/11/18 (opt_points_8_5_22), registration_revised/fit_stretch.py.
+# Anchors: (stimulus px, camera px), 1-based (row, col) as in Joanna's tables; the camera is day-level (Joanna's
+# assumption: the camera did not move within a day). Sessions of a day are aligned to the anchor session by
+# src/session_register (vessels).
+
+model:
+  a: 1.43
+  alpha_thesis: 1.50          # P = theta / alpha  (repo convention alpha = 1/1.50)
+  r: 0.539
+  k: 1.0
+  sech_ecc_k: 0.76            # S1
+  sech_amp: 0.1821            # S2
+
+days:
+  "100718":                   # thesis set opt_points_25_09_23_23_01.mat: vertical-bar upper + circle bottom
+    anchors:
+      - {stim_rc: [9, 21], cam_rc: [46, 24]}
+      - {stim_rc: [37, 21], cam_rc: [36, 58]}
+  "201118":                   # opt_points_8_5_22.mat, Joanna's winner pair (session a letters)
+    anchors:
+      - {stim_rc: [49, 18], cam_rc: [31, 78]}
+      - {stim_rc: [15, 18], cam_rc: [36, 25]}
+
+# Encoding sets: name -> day. The name is part of the LUT / LOO output paths (set-<name>__anchor-<session>), so
+# results of the old geometry (sets "100718", "201118") are not overwritten.
+sets:
+  revised_100718: {day: "100718"}
+  revised_201118: {day: "201118"}

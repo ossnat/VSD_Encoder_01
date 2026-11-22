@@ -4,8 +4,8 @@
 # Does not replace configs/schira_encoding/default.yaml (100718a).
 
 monkey: gandalf
-schira_config: configs/schira/sets.yaml
-schira_set: "201118"
+schira_config: configs/schira/revised.yaml
+schira_set: "revised_201118"
 anchor_session: "201118d"
 
 spatial_size: [100, 100]

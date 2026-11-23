@@ -6,15 +6,19 @@
 # 201118a letters may be in encoding pairs for *training*; skip them as
 # Protocol A/C test folds via train_only_sessions / --train-only-dates.
 
+# 2026-11-23: ids after the stimulus-size fix (sizes are diameters): 100718 circle 0.3 -> 0.6, triangle 0.4 -> 0.8;
+# 240718 circle 0.95 -> 1.9. Previous list: *.pre_fix_2026-11-15.yaml.
 heldout_stimulus_ids:
   - black_bar_horizontal_1
   - black_bar_vertical_1
   - black_circle_contour_0.3
-  - black_circle_contour_0.95
+  - black_circle_contour_0.6
+  - black_circle_contour_1.9
   - black_filled_circle_0.3
   - black_point_0.05
   - black_point_0.1
   - black_triangle_contour_0.4
+  - black_triangle_contour_0.8
   - letter_A_white_1
   - letter_D_white_1
   - letter_F_white_1
